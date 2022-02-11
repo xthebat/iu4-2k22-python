@@ -2,7 +2,6 @@ import sys
 import re
 
 
-# Shift word on key and print result
 def print_cesar(word: str, key: int):
     letters_uppercase = list("ABCDEFGHIJKLMOPQRSTUVWXYZ")
     letters_lowercase = list("abcdefghijklmnopqrstuvwxyz")
@@ -26,15 +25,15 @@ def print_cesar(word: str, key: int):
 
 
 def main(args: str):
-    regex_res = re.search(r"\A([d|e]) (\w+)( key )(\d+)\Z", args)
+    regex_res = re.search(r"\A([d|e]) (\w+) (\d+)\Z", args)
 
     if regex_res is None:
         print("Invalid arguments!", file=sys.stderr)
-        sys.exit(-1)
+        return 1
 
     crypt = regex_res.group(1)  # d or e
     word = regex_res.group(2)
-    key = int(regex_res.group(4))
+    key = int(regex_res.group(3))
 
     if crypt == "e":
         print_cesar(word, key)
