@@ -48,19 +48,31 @@ class Caesar:
         else:
             error('Expected string matching [A-Za-z0-9] pattern')
 
-    def start(self):
-        pass
+    @staticmethod
+    def _code_symbol(token, alphabet, key):
+        return alphabet[(alphabet.index(token) + key) % 62]
 
-    def get_result(self):
-        pass
+    def start(self):
+        result = []
+        alphabet = list(self.alphabet)
+        for symbol in self.string_to_work:
+            try:
+                result.append(self._code_symbol(symbol, alphabet, self.key*self.mode))
+            except ValueError:
+                result.append(' ')
+        self.encoded_string = ''.join(result)
+        return self
+
+    def print_result(self):
+        return print(f"Result: {self.encoded_string}")
 
 
 def main(args: list):
     if len(args) != 4:
         error("Three arguments are expected")
     encryption = Caesar(args[1:])
-    print(encryption)
-    # encryption.start()
+    encryption.start()
+    encryption.print_result()
 
 
 if __name__ == '__main__':
