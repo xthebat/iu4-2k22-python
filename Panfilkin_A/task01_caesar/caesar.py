@@ -15,6 +15,8 @@ def caesar(type: str, string: str, shift: int) -> str:
             new_char = chr((ord(char) + shift - 65) % 26 + 65)
         elif 'a' <= char <= 'z':
             new_char = chr((ord(char) + shift - 97) % 26 + 97)
+        elif '0' <= char <= '9':
+            new_char = chr((ord(char) + shift - 48) % 10 + 48)
         shifted_string_list.append(new_char)
     return "".join(shifted_string_list)
 
