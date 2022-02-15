@@ -8,12 +8,15 @@ def main(args: list):
 
 
 def caesar(type: str, string: str, shift: int) -> str:
+    digit_shift = shift
     if type == 'd':
+        digit_shift = 10 - shift
         shift = 26 - shift
     elif type != 'e':
         raise ValueError(
             "'type' can only take the values 'e' for encrypt or 'd' for decrypt")
     shift %= 27
+    digit_shift %= 11
     shifted_string_list = []
     for char in string:
         new_char = char
@@ -22,7 +25,7 @@ def caesar(type: str, string: str, shift: int) -> str:
         elif 'a' <= char <= 'z':
             new_char = chr((ord(char) + shift - 97) % 26 + 97)
         elif '0' <= char <= '9':
-            new_char = chr((ord(char) + shift - 48) % 10 + 48)
+            new_char = chr((ord(char) + digit_shift - 48) % 10 + 48)
         shifted_string_list.append(new_char)
     return "".join(shifted_string_list)
 
