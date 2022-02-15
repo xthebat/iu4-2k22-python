@@ -1,5 +1,11 @@
 import sys
 
+def main(args: list):
+    if len(args) == 4:
+        print(caesar(args[1], args[2], int(args[3])))
+    else:
+        print("Invalid parameters!")
+
 
 def caesar(type: str, string: str, shift: int) -> str:
     if type == 'd':
@@ -22,6 +28,5 @@ def caesar(type: str, string: str, shift: int) -> str:
 
 
 if __name__ == "__main__":
-    args = sys.argv
-    if len(args) == 4:
-        print(caesar(args[1], args[2], int(args[3])))
+    main(sys.argv)
+    
