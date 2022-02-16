@@ -3,24 +3,24 @@ import string
 
 
 def main(args: list):
-    if len(args) != 4:
+    if len(args) != 3:
         print("Invalid parameters")
         sys.exit(-1)
-    action = args[1]
+    action = args[0]
     if action != "d" and action != "e":
         print("Invalid action")
         sys.exit(-1)
-    text = list(args[2])
+    text = list(args[1])
     for i in range(len(text)):
         if text[i] not in string.ascii_letters+string.digits+string.punctuation:
             print("Invalid symbol in the text")
             sys.exit(-1)
-    key = args[3]
+    key = args[2]
     for i in range(len(key)):
         if key[i] in string.ascii_letters+string.punctuation and (key[i] != "-"):
             print("Invalid key")
             sys.exit(-1)
-    key = int(args[3])
+    key = int(args[2])
     if action == "e":
         for i in range(len(text)):
             if text[i] in string.ascii_lowercase:
@@ -46,4 +46,6 @@ def main(args: list):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    main(["e", "aBcd*123", "1"])
+    main(["d", "aBcd,123", "1"])
+    main(["e", "aBcdИ", "1"])
