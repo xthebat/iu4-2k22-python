@@ -127,3 +127,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+Panfilkin_A/task03_yt_parser/.idea/

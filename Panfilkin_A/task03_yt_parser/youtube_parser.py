@@ -1,82 +1,69 @@
 import sys
 import os
 
-# Вообще нужно эти данные передавать как путь к CSV файлику как минимум.
-# Но c CSV я через пандас работаю, а тут его использовать не стоит думаю.
-# А как максимум - читать из таблицы Sheets, но я делать это не хочу,
-# потому что там дурацкий апи и вообще доступ редактора через апи нужен, вот!
-aka_map_dict = {
-    "Shadowk 1337": "Федоров Роман",
-    "lalaa mala": "Смирнов Владислав",
-    "CoraL77": "Кутаев Кирилл",
-    "Обри": "Комлев Илья",
-    "Konstantin Zhurov": "Журов Константин",
-    "Meme Theme": "Василенко Никита",
-    "AAAAAA": "AAAAAA",
-}
+from collections import namedtuple
+from typing import List, Dict, Optional
+
+from functions import groupby
 
 
-def main(args: list):
-    if len(args) > 1:
-        if os.path.exists(args[1]):
-            with open(args[1], "r", encoding="utf8") as input_file:
-                data_raw = input_file.read()
-            author_data_list = parse(data_raw)
-            map_author_data_aka(author_data_list, aka_map_dict)
-            output_string = ""
-            for author_data in author_data_list:
-                output_string += f"{author_data}\n"
-                for i, comment in enumerate(author_data.comments):
-                    output_string += f"[{i+1}] {comment}\n"
-                output_string += "\n"
-            if len(args) > 2:
-                with open(args[2], 'w', encoding="utf8") as output_file:
-                    output_file.write(output_string)
-            else:
-                print(output_string)
-
-        else:
-            print("Input file does not exist!")
-    else:
-        print("Invalid parameters!")
-        print("Usage: python comments.py <input file> <output file - optional>")
+Record = namedtuple('Record', ['author', 'comment'])
 
 
-class AuthorData:
-    def __init__(self, author) -> None:
-        self.author = author
-        self.aka = None
-        self.comments = []
-        self.comments_count = 0
-        self.symbols_count = 0
+class Author(object):
+
+    def __init__(self, name: str, comments: List[str], aka: Optional[str]):
+        self.name = name
+        self.comments = comments
+        self.aka = aka
 
     def __str__(self) -> str:
         aka = "" if self.aka is None else f" aka {self.aka}"
-        return f"{self.author}{aka} написал(а) {self.comments_count} шт. комментариев на {self.symbols_count} шт. символов"
+        return f"{self.name}{aka} написал(а) {len(self.comments)} шт. комментариев на {self.symbols} шт. символов"
+
+    @property
+    def symbols(self):
+        # better to be lazy
+        return sum(len(it) for it in self.comments)
 
 
-def parse(data_raw: str) -> list:
-    author_data_list = []
-    comments_splitted = data_raw.strip().split('\n\n')
-    for comment_raw in comments_splitted:
-        comment_splitted = comment_raw.strip().split('\n')
-        if len(comment_splitted) == 2:
-            author, comment = comment_splitted
-            author_data = next(
-                (x for x in author_data_list if x.author == author), None)
-            if author_data is None:
-                author_data = AuthorData(author)
-                author_data_list.append(author_data)
-            author_data.comments.append(comment.strip())
-            author_data.comments_count += 1
-            author_data.symbols_count += len(comment)
-    return author_data_list
+class Chat(object):
 
+    @staticmethod
+    def __raw2records(text: str) -> List[Record]:
+        records = []
+        for author_comment in text.strip().split('\n\n'):
+            author_comment_split = author_comment.strip().split('\n')
+            if len(author_comment_split) != 2:
+                print(f"Can't parse record: {author_comment}")
+                continue
+            records.append(Record(author_comment_split[0], author_comment_split[1]))
+        return records
 
-def map_author_data_aka(author_data_list, aka_map_dict) -> None:
-    for author_data in author_data_list:
-        if author_data.author in aka_map_dict:
-            author_data.aka = aka_map_dict[author_data.author]
+    @staticmethod
+    def __parse(text: str, aka: Dict[str, str] = None) -> List[Author]:
+        aka = aka or dict()
+        records = Chat.__raw2records(text)
+        grouped = groupby(records, key=lambda it: it[0])
+        return [Author(name, comments, aka.get(name, None)) for name, comments in grouped.items()]
+
+    @classmethod
+    def from_file(cls, filepath: str, aka: Dict[str, str] = None) -> "Chat":
+        with open(filepath, "rt", encoding="utf8") as input_file:
+            text = input_file.read()
+            authors = Chat.__parse(text, aka)
+            return Chat(authors)
+
+    def __init__(self, authors: List[Author]):
+        self.authors = authors
+
+    def __str__(self):
+        return "\n".join(str(author) for author in self.authors)
+
+    def print(self):
+        # lazy print
+        for author in self.authors:
+            print(author)
 
 
 if __name__ == "__main__":
