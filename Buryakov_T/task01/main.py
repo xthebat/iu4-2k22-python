@@ -47,6 +47,9 @@ def main(arg: list):
         sys.exit(-1)
 
     caesar_cipher(arg[1], arg[2], int(arg[3]))
+    # Функции для проверки шифра
+    #caesar_cipher("e", "Bat2022", 5)
+    #caesar_cipher("d", "Gfy7577", 5)
 
 
 if __name__ == '__main__':
