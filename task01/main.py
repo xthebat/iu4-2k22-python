@@ -4,7 +4,6 @@ import sys
 def Enc_or_dec(cod: str, str_original: list, k: int):
     str_code = str_original
     int_i = 0
-    print(str_original)
     if cod == 'e':
         for symbol in str_original:
             ascii_symbol = ord(symbol)
