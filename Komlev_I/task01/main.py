@@ -1,51 +1,66 @@
 import sys
 import string
+LOWER = string.ascii_lowercase
+UPPER = string.ascii_uppercase
+DIGIT = string.digits
+PUNCT = string.punctuation
+ALL_TEXT = string.ascii_letters+DIGIT+PUNCT
+
+
+def encryption(category: str, char: str, key: int):
+    mod_char = category[(category.find(char) + key) % len(category)]
+    return mod_char
+
+
+def check_text(text: str):
+    for char in text:
+        if char not in ALL_TEXT:
+            print(f"Invalid symbol = {char} in input text")
+            sys.exit(-1)
+
+
+def check_key(key: str):
+    for char in key:
+        if char not in DIGIT:
+            print(f"Invalid symbol = {char} in input key")
+            sys.exit(-1)
+
+
+def check_command(action: str):
+    if action != "e" and action != "d":
+        print(f"Invalid command = {action}")
+        sys.exit(-1)
+
+
+def check_argument(arg: int):
+    if arg != 4:
+        print("Invalid number of arguments")
+        sys.exit(-1)
+
+
+def ceaser(text: list, key: int):
+    for i in range(len(text)):
+        if text[i].islower():
+            text[i] = encryption(LOWER, text[i], key)
+        elif text[i].isupper():
+            text[i] = encryption(UPPER, text[i], key)
+        elif text[i].isdigit():
+            text[i] = encryption(DIGIT, text[i], key)
+    return text
 
 
 def main(args: list):
-    if len(args) != 3:
-        print("Invalid parameters")
-        sys.exit(-1)
-    action = args[0]
-    if action != "d" and action != "e":
-        print("Invalid action")
-        sys.exit(-1)
-    text = list(args[1])
-    for i in range(len(text)):
-        if text[i] not in string.ascii_letters+string.digits+string.punctuation:
-            print("Invalid symbol in the text")
-            sys.exit(-1)
-    key = args[2]
-    for i in range(len(key)):
-        if key[i] in string.ascii_letters+string.punctuation and (key[i] != "-"):
-            print("Invalid key")
-            sys.exit(-1)
-    key = int(args[2])
-    if action == "e":
-        for i in range(len(text)):
-            if text[i] in string.ascii_lowercase:
-                text[i] = string.ascii_lowercase[(string.ascii_lowercase.find(text[i])+key) % 26]
-            elif text[i] in string.ascii_uppercase:
-                text[i] = string.ascii_uppercase[(string.ascii_uppercase.find(text[i])+key) % 26]
-            elif text[i] in string.digits:
-                text[i] = string.digits[(string.digits.find(text[i])+key) % 10]
-            elif text[i] in string.punctuation:
-                text[i] = text[i]
-        print("Encrypted text:", "".join(text))
-    elif action == "d":
-        for i in range(len(text)):
-            if text[i] in string.ascii_lowercase:
-                text[i] = string.ascii_lowercase[(string.ascii_lowercase.find(text[i])-key) % 26]
-            elif text[i] in string.ascii_uppercase:
-                text[i] = string.ascii_uppercase[(string.ascii_uppercase.find(text[i])-key) % 26]
-            elif text[i] in string.digits:
-                text[i] = string.digits[(string.digits.find(text[i])-key) % 10]
-            elif text[i] in string.punctuation:
-                text[i] = text[i]
-        print("Dencrypted text:", "".join(text))
+    check_argument(len(args))
+    check_command(str(args[1]))
+    check_text(str(args[2]))
+    check_key(str(args[3]))
+    if args[1] == 'e':
+        print("".join(ceaser(list(args[2]), int(args[3]))))
+    elif args[1] == 'd':
+        print("".join(ceaser(list(args[2]), -int(args[3]))))
 
 
 if __name__ == '__main__':
-    main(["e", "aBcd*123", "1"])
-    main(["d", "aBcd,123", "1"])
-    main(["e", "aBcdИ", "1"])
+    main(["main.py", "e", "aBcd*123", "1"])
+    main(["main.py", "d", "aBcd,123", "1"])
+    main(["main.py", "e", "aBcd", "1"])
