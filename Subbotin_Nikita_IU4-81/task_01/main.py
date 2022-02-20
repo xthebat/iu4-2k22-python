@@ -56,8 +56,8 @@ def main(args):
         string = input("Enter string (0-9A-Za-z):\n")
 
         while d == 0:
-            key = int(input("Enter key (0-25):\n"))
-            if key > 25 or key < 1:
+            key = int(input("Enter key (0-10):\n"))
+            if key > 10 or key < 1:
                 print("Wrong key!\n")
             else:
                 d = 1
