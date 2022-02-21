@@ -5,6 +5,11 @@ uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 lowercase = 'abcdefghijklmnopqrstuvwxyz'
 
 
+def overwrite(dictionary: str, i: str, key: int, end_string: list):
+    a = (dictionary.index(i) + key) % len(dictionary)
+    end_string.append(dictionary[a])
+
+
 def caesar_cipher(d_e: str, string_to_work: str, key: int) -> str:
     """
     Caesar ciphers for encoding and decoding strings
@@ -24,20 +29,14 @@ def caesar_cipher(d_e: str, string_to_work: str, key: int) -> str:
 
     for i in string_to_work:
         if i in numbers:
-            a = (numbers.index(i) + key) % len(numbers)
-            end_string.append(numbers[a])
-
+            overwrite(numbers, i, key, end_string)
         elif i in uppercase:
-            a = (uppercase.index(i) + key) % len(uppercase)
-            end_string.append(uppercase[a])
-
+            overwrite(uppercase, i, key, end_string)
         elif i in lowercase:
-            a = (lowercase.index(i) + key) % len(lowercase)
-            end_string.append(lowercase[a])
+            overwrite(lowercase, i, key, end_string)
         else:
             print("Invalid symbol:", i)
             sys.exit(-1)
-
     return "".join(end_string)
 
 
