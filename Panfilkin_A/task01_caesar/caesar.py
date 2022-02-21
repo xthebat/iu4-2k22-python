@@ -1,4 +1,6 @@
 import sys
+import string
+
 
 def main(args: list):
     if len(args) == 4:
@@ -7,29 +9,17 @@ def main(args: list):
         print("Invalid parameters!")
 
 
-def caesar(type: str, string: str, shift: int) -> str:
-    digit_shift = shift
+def caesar(type: str, origin_string: str, shift: int) -> str:
     if type == 'd':
-        digit_shift = 10 - shift
-        shift = 26 - shift
-    elif type != 'e':
+        shift = shift
+    elif type == 'e':
+        shift = -shift
+    else:
         raise ValueError(
             "'type' can only take the values 'e' for encrypt or 'd' for decrypt")
-    shift %= 27
-    digit_shift %= 11
-    shifted_string_list = []
-    for char in string:
-        new_char = char
-        if 'A' <= char <= 'Z':
-            new_char = chr((ord(char) + shift - 65) % 26 + 65)
-        elif 'a' <= char <= 'z':
-            new_char = chr((ord(char) + shift - 97) % 26 + 97)
-        elif '0' <= char <= '9':
-            new_char = chr((ord(char) + digit_shift - 48) % 10 + 48)
-        shifted_string_list.append(new_char)
-    return "".join(shifted_string_list)
+    DICTIONARY = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    return ''.join([DICTIONARY[((DICTIONARY.index(char) + shift) % len(DICTIONARY))] if char in DICTIONARY else char for char in origin_string])
 
 
 if __name__ == "__main__":
     main(sys.argv)
-    
