@@ -125,19 +125,5 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
-.pyre/
-
-Aiguzhin_V/task01/.idea/inspectionProfiles/profiles_settings.xml
-
-Aiguzhin_V/task01/.idea/misc.xml
-
-Aiguzhin_V/task01/.idea/modules.xml
-
-Aiguzhin_V/task01/.idea/sonarlint/issuestore/index.pb
-
-Aiguzhin_V/task01/.idea/task01.iml
-
-Aiguzhin_V/task01/.idea/vcs.xml
-
-Aiguzhin_V/task01/.idea/workspace.xml
+.idea
+.DS_Store
