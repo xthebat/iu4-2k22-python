@@ -1,3 +1,4 @@
+
 import sys
 
 
@@ -23,30 +24,34 @@ def main(args: list):
     elif args[1] == 'e':
         encryption(l, key)
 
+    stra = "ABC"
+    stra1 = chr(ord('A'))
+    print("".join([stra, stra1]))
 
-def encryption(stroka, kluch):
+def encryption(string, shift):
     result = ''
-    for i in range(len(stroka)):
-        char = stroka[i]
+    for i in range(len(string)):
+        char = string[i]
         if char.isupper():
-            result += chr((ord(char) + kluch - 1 - 64) % 26 + 65)
+            result = "".join([result, chr((ord(char) + shift - 1 - 64) % 26 + 65)])
         if char.islower():
-            result += chr((ord(char) + kluch - 1 - 96) % 26 + 97)
+            result = "".join([result, chr((ord(char) + shift - 1 - 96) % 26 + 97)])
         if char.isdigit():
-            result += chr((ord(char) + kluch - 1 - 47) % 10 + 48)
+            result = "".join([result, chr((ord(char) + shift - 1 - 47) % 10 + 48)])
+
     print(result)
 
 
-def decryption(stroka, kluch):
+def decryption(string, shift):
     result = ''
-    for i in range(len(stroka)):
-        char = stroka[i]
+    for i in range(len(string)):
+        char = string[i]
         if char.isupper():
-            result += chr((ord(char) - kluch + 1 + 65) % 26 + 64)
+            result = "".join([result, chr((ord(char) - shift + 1 + 65) % 26 + 64)])
         if char.islower():
-            result += chr((ord(char) - kluch + 1 + 85) % 26 + 96)
+            result = "".join([result, chr((ord(char) - shift + 1 + 85) % 26 + 96)])
         if char.isdigit():
-            result += chr((ord(char) - kluch + 1 + 41) % 10 + 48)
+            result = "".join([result, chr((ord(char) - shift + 1 + 41) % 10 + 48)])
     print(result)
 
 
