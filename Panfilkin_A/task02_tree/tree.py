@@ -8,7 +8,6 @@ def main(args: list):
     else:
         directory_name = args[0]
     tree_list = generate_tree_list(directory_name)
-    print(tree_list)
     print_tree_list(tree_list)
 
 
