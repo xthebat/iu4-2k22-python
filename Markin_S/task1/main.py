@@ -18,7 +18,7 @@ def cipher(cipher_method: str, string_to_work: str, key: int):
     else:
         print(f"<{cipher_method}> is not true argument to use")
         sys.exit(-1)
-    res = ""
+    res = []
     for ch in string_to_work:
         if ch.isdigit():
             alphabet = string.digits
@@ -27,8 +27,8 @@ def cipher(cipher_method: str, string_to_work: str, key: int):
         else:
             alphabet = string.ascii_uppercase
         index = alphabet.find(ch)
-        res += alphabet[(index + key) % len(alphabet)]
-    print(res)
+        res.append(alphabet[(index + key) % len(alphabet)])
+    print("".join(res))
 
 
 if __name__ == '__main__':
