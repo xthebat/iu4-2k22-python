@@ -8,13 +8,9 @@ def generation(directory: str):
     for element in sort_dir:
         if os.path.isdir(os.path.join(directory, element)):
             tree_string.append(element)
-    if tree_string == 0:
-        return os.path.basename(directory)
-    else:
-        final_list = [os.path.basename(directory)]
-        for element in tree_string:
-            final_list.append(generation(os.path.join(directory, element)))
-        return final_list
+            if generation(os.path.join(directory, element)):
+                tree_string.append(generation(os.path.join(directory, element)))
+    return tree_string
 
 
 def drawing(tree: list, level: int):
@@ -31,4 +27,4 @@ def main(args: list):
 
 
 if __name__ == '__main__':
-    main(['main.py', '.'])
+    main(['main.py', '/Users/obri/Documents/repos/'])
