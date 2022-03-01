@@ -34,5 +34,6 @@ def main(args: list):
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    # main(sys.argv)
+    main('main.py', 'C:\test')
 
