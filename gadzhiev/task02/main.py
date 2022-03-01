@@ -17,7 +17,7 @@ def collect(current_dir: str):
     return list_of_dirs
 
 
-def print_list_of_dirs(directory: list, lev: int = 0):  # Аккуратно своровано и немного исправлено
+def print_list_of_dirs(directory: list, lev: int = 0):  # Функция печати аккуратно скопирована и исправлена
     for index in directory:
         if isinstance(index, list):
             print_list_of_dirs(index, lev + 1)
