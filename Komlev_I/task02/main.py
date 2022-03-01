@@ -18,16 +18,11 @@ def generation(directory: str):
 
 
 def drawing(tree: list, level: int):
-    tree_string = []
-    for index in range(level):
-        tree_string.append("_")
-    print("|", "".join(tree_string)+tree[0])
-    tree_string.append("_")
-    for index in range(len(tree)-1):
-        if type(tree[index+1]) != list:
-            print('|', "".join(tree_string) + tree[index])
+    for index in tree:
+        if isinstance(index, list):
+            drawing(index, level+1)
         else:
-            drawing(tree[index + 1], level + 1)
+            print("|_"+"__" * level + ">" + index)
 
 
 def main(args: list):
@@ -37,4 +32,3 @@ def main(args: list):
 
 if __name__ == '__main__':
     main(['main.py', '.'])
-    
