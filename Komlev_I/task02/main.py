@@ -37,3 +37,4 @@ def main(args: list):
 
 if __name__ == '__main__':
     main(['main.py', '.'])
+    
