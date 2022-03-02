@@ -1,21 +1,40 @@
 import sys
 import os
+from typing import List, Optional
 
 
 class Directory:
 
-    def __init__(self, name: str):
-        self.name = name
-        self.files = list()
-        self.dirs = list()
+    # Set lists files and dirs to object
+    # work like depth search for dirs
+    @classmethod
+    def parse(cls, root: str):
+        result = cls(root)
 
-    # тут должен был быть еще один перегруженный конструктор но он пал жертвой питона
+        for name in os.listdir(root):
+            path = os.path.join(root, name)
+            if os.path.isdir(path):
+                result.add_dir(Directory.parse(path))
+            else:
+                result.add_file(name)
+
+        return result
+
+    def __init__(
+            self,
+            name: str,
+            files: Optional[List[str]] = None,
+            dirs: Optional[List["Directory"]] = None
+    ):
+        self.name = name
+        self.files = files or list()
+        self.dirs = dirs or list()
 
     def add_file(self, file: str):
         self.files.append(file)
 
-    def add_dir(self, dir):
-        self.dirs.append(dir)
+    def add_dir(self, directory: "Directory"):
+        self.dirs.append(directory)
 
     # Print all by depth search
     def print(self, depth=0):
@@ -26,27 +45,14 @@ class Directory:
         for directory in self.dirs:
             directory.print(depth + 1)
 
-    # Set lists files and dirs to object
-    # work like depth search for dirs
-    def parse(self):
-        for name in os.listdir(self.name):
-            new_name = os.path.join(self.name, name)
-            if os.path.isdir(new_name):
-                new_dir = Directory(new_name)
-                self.dirs.append(new_dir)
-                new_dir.parse()
-            else:
-                self.files.append(name)
 
-
-def main(args: list):
+def main(args: List[str]):
     root_dir_name = args[1]
-    root_dir = Directory(root_dir_name)
+    root_dir = Directory.parse(root_dir_name)
 
-    root_dir.parse()
     root_dir.print()
 
 
 if __name__ == '__main__':
-    main(["main.py", "."])  # Just little test
-    main(sys.argv)
+    main(["main.py", "../../"])  # Just little test
+    # main(sys.argv)
