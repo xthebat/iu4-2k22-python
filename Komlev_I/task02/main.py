@@ -9,7 +9,7 @@ def walk_dir(directory: str):
         next_dir = os.path.join(directory, element)
         if os.path.isfile(next_dir):
             tree_string.append(element)
-        if os.path.isdir(next_dir):
+        elif os.path.isdir(next_dir):
             tree_string.append(element)
             if walk_dir(next_dir):
                 tree_string.append(walk_dir(next_dir))
@@ -30,4 +30,4 @@ def main(args: list):
 
 
 if __name__ == '__main__':
-    main(['main.py', '.'])
+    main(['main.py', '../'])
