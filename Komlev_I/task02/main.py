@@ -2,29 +2,32 @@ import sys
 import os
 
 
-def generation(directory: str):
+def walk_dir(directory: str):
     sort_dir = sorted(os.listdir(directory))
     tree_string = []
     for element in sort_dir:
-        if os.path.isdir(os.path.join(directory, element)):
+        next_dir = os.path.join(directory, element)
+        if os.path.isfile(next_dir):
             tree_string.append(element)
-            if generation(os.path.join(directory, element)):
-                tree_string.append(generation(os.path.join(directory, element)))
+        if os.path.isdir(next_dir):
+            tree_string.append(element)
+            if walk_dir(next_dir):
+                tree_string.append(walk_dir(next_dir))
     return tree_string
 
 
-def drawing(tree: list, level: int):
+def print_tree(tree: list, level: int = 0):
     for index in tree:
         if isinstance(index, list):
-            drawing(index, level+1)
+            print_tree(index, level+1)
         else:
-            print("|_"+"__" * level + ">" + index)
+            print("|-"+"-" * level + ">" + index)
 
 
 def main(args: list):
-    result = generation(args[1])
-    drawing(result, 0)
+    result = walk_dir(args[1])
+    print_tree(result, 0)
 
 
 if __name__ == '__main__':
-    main(['main.py', '/Users/obri/Documents/repos/'])
+    main(['main.py', '.'])
