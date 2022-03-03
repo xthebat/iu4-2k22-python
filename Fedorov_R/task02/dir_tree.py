@@ -1,46 +1,75 @@
-import sys
-from os.path import basename, isdir
+from os.path import basename
 from pathlib import Path
+from typing import List
+
+EMPTY = ""
+ELBOW = "└──"
+TEE = "├──"
+PIPE_PREFIX = "│   "
+SPACE_PREFIX = "    "
 
 
-class DirTree:
+class Printable:
+
+    def print(self, prefix: str = EMPTY, elbow: str = EMPTY):
+        raise NotImplementedError
+
+
+class File(Printable):
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def print(self, prefix: str = EMPTY, elbow: str = EMPTY):
+        print(f"{prefix}{elbow} {self.name}")
+
+    def __repr__(self):
+        return f"File({self.name})"
+
+
+class Directory(Printable):
     """Class implementing directory tree"""
-    ELBOW = "└──"
-    TEE = "├──"
-    PIPE_PREFIX = "│   "
-    SPACE_PREFIX = "    "
 
-    def process_dir(self, dir_name: str) -> str:
-        if not self._validate_dir(dir_name):
-            sys.exit("dir_tree.py:\nExpected directory name")
-        dir_list = [dir_name] + self._get_directory_list(Path(dir_name))
-        return dir_name + "\n" + self._prepare_for_print(dir_list[1:])
-
-    def _validate_dir(self, dir_name: str) -> bool:
-        return isdir(dir_name)
-
-    def _get_directory_list(self, dir_path: Path) -> list:
-        dir_list = []
-        for file in sorted(dir_path.iterdir()):
-            dir_list.append(basename(file))
+    @classmethod
+    def from_path(cls, path: Path) -> "Directory":
+        directory = Directory(basename(str(path)))
+        for file in sorted(path.iterdir()):
             if file.is_dir():
-                dir_list.append(self._get_directory_list(file))
-        return dir_list
+                internal_dir = Directory.from_path(file)
+                directory.add(internal_dir)
+            else:
+                directory.add(File(file.name))
+        return directory
 
-    def _prepare_for_print(self, dir_list: list, attach: str = "") -> str:
-        res = ""
-        for idx, file_name in enumerate(dir_list):
-            if file_name:
-                if isinstance(file_name, list):
-                    sign = self.SPACE_PREFIX if idx == len(dir_list) - 1 else self.PIPE_PREFIX
-                    res += self._prepare_for_print(file_name, attach + sign)
-                else:
-                    no_lists = [x for x in dir_list if not isinstance(x, list)]
-                    sign = self.ELBOW if no_lists.index(file_name) == len(no_lists) - 1 else self.TEE
-                    res += attach + sign + " " + file_name + "\n"
-        return res
+    def __init__(self, name: str):
+        self.name = name
+        self.items: List[Printable] = list()
+
+    def add(self, item: Printable):
+        self.items.append(item)
+
+    def print(self, prefix: str = EMPTY, elbow: str = EMPTY):
+        if elbow == EMPTY:
+            addon = EMPTY
+            print(self.name)
+        else:
+            addon = SPACE_PREFIX if elbow == ELBOW else PIPE_PREFIX
+            print(f"{prefix}{elbow} {self.name}")
+
+        for item in self.items[:-1]:
+            item.print(prefix=f"{prefix}{addon}", elbow=TEE)
+
+        if len(self.items) > 0:
+            self.items[-1].print(prefix=f"{prefix}{addon}", elbow=ELBOW)
+
+    def __repr__(self):
+        return f"Directory({self.name})"
+
+
+def main(args: List[str]):
+    directory = Directory.from_path(Path(args[1]))
+    directory.print()
 
 
 if __name__ == '__main__':
-    dir_tree = DirTree()
-    print(dir_tree.process_dir(sys.argv[1]))
+    main(["main.py", "."])
