@@ -7,8 +7,8 @@ def dig_tree_dir(dir_str: str) -> list:
     directory = sorted(os.listdir(dir_str))
 
     for index in directory:
+        tree.append(index)
         if os.path.isdir(os.path.join(dir_str, index)):
-            tree.append(index)
             add_dir = dig_tree_dir(os.path.join(dir_str, index))
             if add_dir:
                 tree.append(add_dir)
