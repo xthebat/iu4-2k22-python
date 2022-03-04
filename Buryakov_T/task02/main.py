@@ -3,38 +3,27 @@ import os
 
 
 def dir_tree(start_dir: str) -> list:
-    os.chdir(start_dir)
     dir_collection = []
-    for name in os.listdir('.'):
-        if os.path.isdir(name):
+    for name in sorted(os.listdir(start_dir)):
+        if os.path.isdir(os.path.join(start_dir, name)):
             dir_collection.append(name)
-            temp_dir = dir_tree(name)
-            if temp_dir:
-                dir_collection.append(temp_dir)
-    os.chdir("..")
+            dir_collection.append(dir_tree(os.path.join(start_dir, name)))
+        else:
+            dir_collection.append(name)
     return dir_collection
 
 
-def tree_visualization(dir_collection: list, level: int):
-    for directory in dir_collection:
-        if type(directory) == list:
-            tree_visualization(directory, level+1)
+def tree_visualization(start_dir: str, dir_collection: list):
+    for i, item in enumerate(dir_collection):
+        if type(item) == list:
+            tree_visualization(start_dir + "--> " + dir_collection[i - 1], item)
         else:
-            print("|" + "--"*level + "> " + directory)
+            print(start_dir + "--> " + item)
 
 
-def main(arg):
-    if arg[2] == 'up':
-        while not os.path.isdir(arg[1]):
-            os.chdir("..")
-    elif arg[2] == 'down':
-        while not os.path.isdir(arg[1]):
-            os.chdir(".")
-    else:
-        exit("Unexpected value")
-    tree_visualization(dir_tree(arg[1]), 1)
+def main(arg: list):
+    tree_visualization(arg[1], dir_tree(arg[1]))
 
 
 if __name__ == '__main__':
     main(sys.argv)
-    # Указывайте директорию выше расположения файла
