@@ -3,21 +3,17 @@ import sys
 
 
 def collect(current_dir: str):
-    os.chdir(current_dir)
-    list_of_dirs = [current_dir]
-    only_dirs = []
-    everything = os.listdir(".")
+    list_of_dirs = [current_dir.split("/")[-1]]
+    everything = os.listdir(current_dir)
     if len(everything) != 0:
-        for elem in everything:
-            if os.path.isdir(everything[everything.index(elem)]):
-                only_dirs.append(everything[everything.index(elem)])
-        for elem in only_dirs:
-            list_of_dirs.append(collect(elem))
-    os.chdir("..")
+        for index, elem in enumerate(everything):
+            list_of_dirs.append(elem)
+            if os.path.isdir(os.path.join(current_dir, elem)):
+                list_of_dirs.append(collect(os.path.join(current_dir, elem)))
     return list_of_dirs
 
 
-def print_list_of_dirs(directory: list, lev: int = 0):  # Функция печати аккуратно скопирована и исправлена
+def print_list_of_dirs(directory: list, lev: int = 0):
     for index in directory:
         if isinstance(index, list):
             print_list_of_dirs(index, lev + 1)
@@ -26,8 +22,6 @@ def print_list_of_dirs(directory: list, lev: int = 0):  # Функция печ�
 
 
 def main(args: list):
-    while not os.path.isdir(args[1]):
-        os.chdir("..")
     print_list_of_dirs(collect(args[1]))
 
 
