@@ -128,16 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-Aiguzhin_V/task02/.idea/vcs.xml
-
-Aiguzhin_V/task02/.idea/workspace.xml
-
-Aiguzhin_V/task02/.idea/inspectionProfiles/profiles_settings.xml
-
-Aiguzhin_V/task02/.idea/misc.xml
-
-Aiguzhin_V/task02/.idea/modules.xml
-
-Aiguzhin_V/task02/.idea/sonarlint/issuestore/index.pb
-
-Aiguzhin_V/task02/.idea/task02.iml
+.idea
+.DS_Store
