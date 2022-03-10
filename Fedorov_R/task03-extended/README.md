@@ -6,10 +6,10 @@
 ## Скрины приложения
 
 ### Общая статистика
-![overview_screen](/assets/images/overview_screen.png)
+![overview_screen](../blob/task03/assets/images/overview_screen.png)
 
 ### Статистика пользователя
-![user_screen](/assets/images/user_screen.png)
+![user_screen](../blob/task03/assets/images/user_screen.png)
 
 ## Что реализовано на данный момент
 
