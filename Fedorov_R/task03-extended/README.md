@@ -1,15 +1,15 @@
 # Youtube Chat Statistics
 ## Федоров Р.А.
----
+
 Решил в дополнение к task03 сделать приложение по оценке статистики чата на основе фреймворка PyQt5.
 
 ## Скрины приложения
 
 ### Общая статистика
-![overview_screen](../blob/task03/assets/images/overview_screen.png)
+![overview_screen](https://github.com/shadowk1337/iu4-2k22-python/tree/task03/Fedorov_R/task03-extended/assets/images/overview_screen.png?raw=true)
 
 ### Статистика пользователя
-![user_screen](../blob/task03/assets/images/user_screen.png)
+![user_screen](https://github.com/shadowk1337/iu4-2k22-python/tree/task03/Fedorov_R/task03-extended/assets/images/user_screen.png?raw=true)
 
 ## Что реализовано на данный момент
 
