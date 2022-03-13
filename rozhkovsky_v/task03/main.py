@@ -1,13 +1,13 @@
 import sys
 import re
+from dataclasses import dataclass
 
 
+@dataclass
 class Name:
-
-    def __init__(self, real: str, youtube: str, github: str):
-        self.real = real
-        self.youtube = youtube
-        self.github = github
+    youtube: str
+    real: str = None
+    github: str = None
 
 
 class User:
@@ -28,69 +28,62 @@ class User:
             print(" -", comment)
 
 
-def search_by_name(users_list: list, yt_name: str):
-    for user in users_list:
-        if user.name.youtube == yt_name:
-            return user
-    return None
-
-
 # Производим парсинг по файлу с коментариями
-def parse(file_name: str) -> list:
-    users_list = list()
-    file = open(file_name, "r", encoding='utf-8')
-    text = file.read().split("\n")
+def parse(file_name: str) -> dict:
+    users_dict = dict()
 
-    for i in range(0, len(text), 3):
-        yt_name = text[i]
-        comment = text[i+1]
-        user = search_by_name(users_list, yt_name)
-        if user is None:
-            name = Name("None", yt_name, "None")
-            user = User(name, list())
-            users_list.append(user)
+    file = open(file_name, "rt", encoding='utf-8')
+    strings = file.read().split("\n\n")
+    file.close()
+
+    for name_and_comment in strings:
+        name_and_comment = name_and_comment.splitlines()
+        yt_name = name_and_comment[0]
+        comment = name_and_comment[1]
+        name = Name(yt_name)
+        new_user = User(name, list())
+        user = users_dict.setdefault(yt_name, new_user)
         user.add_comment(comment)
 
-    file.close()
-    return users_list
+    return users_dict
 
 
 # производим парсинг по файлу с коментариями , используя список имён
-def parse_use_names(file_name: str, names_list: list) -> list:
-    users_list = list()
-    file = open(file_name, "r", encoding='utf-8')
+def parse_using_names(file_name: str, names_list: list) -> dict:
+    users_dict = dict()
+    file = open(file_name, "rt", encoding='utf-8')
     text = file.read()
+    file.close()
     for name in names_list:
         yt_name = name.youtube
         if yt_name == "":
             continue
         regex = re.findall(f"{yt_name}\n(.+)", text)
         user = User(name, regex)
-        users_list.append(user)
+        users_dict[yt_name] = user
 
-    file.close()
-    return users_list
+    return users_dict
 
 
 # парсинг списка имен из csv файла
 def parse_from_csv(file_name: str) -> list:
     names_list = list()
-    file = open(file_name, "r", encoding='utf-8')
-
+    file = open(file_name, "rt", encoding='utf-8')
     text = file.read()
+    file.close()
+
     for line in text.split("\n")[1:]:
         line = line.split(",")
         real_name = line[1]
-        regex = re.search(r"github\.com/(.+)", line[2])
-        if regex is None:
+        git_line = line[2].split("/")
+        if len(git_line) != 4:
             git_name = ""
         else:
-            git_name = regex.group(1)
+            git_name = git_line[3]
         yt_name = line[3]
-        name = Name(real_name, yt_name, git_name)
+        name = Name(yt_name, real_name, git_name)
         names_list.append(name)
 
-    file.close()
     return names_list
 
 
@@ -100,13 +93,13 @@ def main(args: list):
     names_list = parse_from_csv(args[2])
 
     # 2. По каждому имени собираем коменты
-    users_list = parse_use_names(args[1], names_list)
+    users_dict = parse_using_names(args[1], names_list)
 
-    # Или собираем чисто из файла (по условию)
-    # users_list = parse(args[1])
+    # Или собираем чисто из файла (чисто по условию тз, вариант 2)
+    # users_dict = parse(args[1])
 
     # 3. Печатаем
-    for user in users_list:
+    for user in users_dict.values():
         user.print()
 
 
