@@ -1,4 +1,5 @@
 from os.path import exists
+import sys
 from task03.configs import *
 from task03.classes import FileContentError
 from task03.classes import FileExtensionError
@@ -16,7 +17,10 @@ def check_comment(chat_file_lines: list, idx: int) -> int:
 
 
 def parse_chat(chat_file: str) -> dict:
-    chat_file_read = open(chat_file, encoding=ENCODING)
+    try:
+        chat_file_read = open(chat_file, encoding=ENCODING)
+    except PermissionError as error:
+        sys.exit(f"You do not have permission to the '{error}' file ")
     chat_file_lines: list = chat_file_read.readlines()
 
     if not chat_file_lines:
@@ -38,19 +42,23 @@ def parse_chat(chat_file: str) -> dict:
 
 
 def parse_table(users_table: str) -> dict:
-    table_file_read = open(users_table, encoding=ENCODING)
+    try:
+        table_file_read = open(users_table, 'r', encoding=ENCODING)
+    except PermissionError as error:
+        sys.exit(f"You do not have permission to the '{error}' file ")
+    table_file_lines: list = table_file_read.readlines()
 
-    if not table_file_read.readlines():
+    if not table_file_lines:
         raise EOFError(users_table)
 
     users_nick_dict: dict = {}
-    for line in table_file_read.readlines():
+    for line in table_file_lines:
         list_line: list = line.split(',')
 
-        if list_line[REAL_NAME_CELL] == '':
-            raise FileContentError(users_table, int(line))
-
         if list_line[NUMBER_CELL].isdigit():
+            if list_line[REAL_NAME_CELL] == '':
+                raise FileContentError(users_table, int(line))
+
             if list_line[YT_NICK_CELL] != '':
                 users_nick_dict.update({list_line[YT_NICK_CELL]: list_line[REAL_NAME_CELL]})
     return users_nick_dict
