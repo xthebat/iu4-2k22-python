@@ -1,10 +1,13 @@
+from dataclasses import dataclass
+
+
+@dataclass
 class FileExtensionError(Exception):
-    def __init__(self, true_extension: str, file: str):
-        self.true_extension: str = true_extension
-        self.file: str = file
+    true_extension: str
+    file: str
 
 
+@dataclass
 class FileContentError(Exception):
-    def __init__(self, file: str, line: int):
-        self.file: str = file
-        self.line: int = line
+    file: str
+    line: int
