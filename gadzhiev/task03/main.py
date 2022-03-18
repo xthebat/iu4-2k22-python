@@ -53,7 +53,6 @@ def parse_txt_file(text: str, name: str) -> dict:
             list_of_comm.append(elem[1].replace(ZERO_WIDTH_SPACE, ""))
         except IndexError:
             raise InTxtError(elem[0], index)
-        dict_of_comments[elem[0]] = list_of_comm
     if len(dict_of_comments) <= 1:
         raise TxtTypeError(name)
     else:
@@ -124,4 +123,3 @@ if __name__ == '__main__':
     main(["main.py", "chat.txt", "chat.txt"])               # проверка CsvTypeError
     main(["main.py", "err_chat.txt", "scoreboard.csv"])     # проверка InTxtError
     main(["main.py", "chat.txt", "err_scoreboard.csv"])     # проверка InCsvError
-
