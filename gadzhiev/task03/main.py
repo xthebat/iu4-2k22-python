@@ -1,58 +1,85 @@
 import sys
 
-AVA_IN_UTF = "\u200b"
-NIKCNAME_POSITION = 3
-NAME_POSITION = 1
+ZERO_WIDTH_SPACE = "\u200b"
+NIKCNAME_POSITION_IN_CSV = 3
+NAME_POSITION_IN_CSV = 1
+ITERATION_IN_TXT = 4
+
+
+class CsvTypeError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+
+class TxtTypeError(Exception):
+    def __init__(self, value):
+        self.value = value
+
+
+class InTxtError(Exception):
+    def __init__(self, value, index):
+        self.value = value
+        self.index = index
+
+
+class InCsvError(Exception):
+    def __init__(self, value, index):
+        self.value = value
+        self.index = index
 
 
 class FileError(Exception):
-    def __init__(self, value, line):
+    def __init__(self, value):
         self.value = value
-        self.line = line
 
 
-class TxtError(Exception):
-    def __init__(self, value, line):
-        self.value = value
-        self.line = line
-
-
-class CsvError(Exception):
-    def __init__(self, value, line):
-        self.value = value
-        self.line = line
-
-
-def read_file(arg: str) -> list:
+def read_file(arg: str) -> str:
     try:
         with open(arg, "r", encoding="utf-8") as file:
             chat = file.read()
-            chat_list = chat.split("\n")
     except FileNotFoundError:
-        raise FileError(arg, sys.exc_info()[2].tb_lineno)
+        raise FileError(arg)
     else:
-        return chat_list
+        return chat
 
 
-def parse_txt_file(text: list) -> dict:
+def parse_txt_file(text: str, name: str) -> dict:
+    chat = text.split("\n\n\n")
     dict_of_comments = {}
-    for ind, elem in enumerate(text):
-        if elem != "" and AVA_IN_UTF not in elem:
-            dict_of_comments[elem] = []
-    for ind, elem in enumerate(text):
-        if elem != "" and AVA_IN_UTF not in elem:
-            list_of_comm = dict_of_comments.get(elem)
-            list_of_comm.append(text[ind + 1].replace(AVA_IN_UTF, ""))
-    return dict_of_comments
+    for index, element in enumerate(chat):
+        elem = element.split("\n")
+        list_of_comm = dict_of_comments.setdefault(elem[0], list())
+        try:
+            list_of_comm.append(elem[1].replace(ZERO_WIDTH_SPACE, ""))
+        except IndexError:
+            raise InTxtError(elem[0], index)
+        dict_of_comments[elem[0]] = list_of_comm
+    if len(dict_of_comments) <= 1:
+        raise TxtTypeError(name)
+    else:
+        return dict_of_comments
 
 
-def parse_csv_file(dict_of_comments: dict, list_from_csv: list) -> dict:
-    name_nickname_dict = dict_of_comments.fromkeys(dict_of_comments, "")
-    for elem in name_nickname_dict.keys():
-        for unit in list_from_csv:
-            list_unit = unit.split(",")
-            if elem == list_unit[NIKCNAME_POSITION]:
-                name_nickname_dict[elem] = list_unit[NAME_POSITION]
+def parse_csv_file(text: str, name: str) -> list:
+    try:
+        table = text.split("\n")
+        name_nickname_list = []
+        for element in table:
+            list_element = element.split(",")
+            name_nickname_list.append([list_element[NIKCNAME_POSITION_IN_CSV],
+                                       list_element[NAME_POSITION_IN_CSV]])
+        return name_nickname_list
+    except IndexError:
+        raise CsvTypeError(name)
+
+
+def build_dict_of_names(dict_of_comments: dict, name_nickname_list: list) -> dict:
+    name_nickname_dict = {}
+    for index, elem in enumerate(name_nickname_list):
+        if elem[0] in dict_of_comments:
+            if elem[1] == "":
+                raise InCsvError(elem[0], index + 1)
+            name_nickname_dict[elem[0]] = elem[1]
     return name_nickname_dict
 
 
@@ -64,32 +91,37 @@ def print_information(dict_of_comment: dict, dict_of_nicknames: dict) -> None:
                 print(f"Количество комментариев = {len(value)}")
                 print(f"Количество символов = {len(''.join(value))}")
                 for ind, elem in enumerate(value):
-                    print(f"{ind+1}-й комментарий: {elem}")
-                print("."*50)
+                    print(f"{ind + 1}-й комментарий: {elem}")
+                print("." * 50)
 
 
 def main(args: list):
     try:
-        try:
-            comments = parse_txt_file(read_file(args[1]))
-        except IndexError:
-            raise TxtError(args[1], sys.exc_info()[2].tb_lineno)
-        try:
-            nicknames = parse_csv_file(comments, read_file(args[2]))
-        except IndexError:
-            raise CsvError(args[1], sys.exc_info()[2].tb_lineno)
-        print_information(comments, nicknames)
+        dict_of_comments = parse_txt_file(read_file(args[1]), args[1])
+        dict_of_nicknames = build_dict_of_names(dict_of_comments,
+                                                parse_csv_file(read_file(args[2]), args[2]))
+        print_information(dict_of_comments, dict_of_nicknames)
     except FileError as error:
-        print(f"Файл '{error.value}' не найден. Строка ошибки: '{error.line}'")
-    except TxtError as error:
-        print(f"Данная функция принимает только .txt файлы\n"
-              f"Файл '{error.value}' не подходит. Строка ошибки: '{error.line}'")
-    except CsvError as error:
-        print(f"Данная функция принимает только .csv файлы\n"
-              f"Файл '{error.value}' не подходит. Строка ошибки: '{error.line}'")
+        print(f"Файл '{error.value}' не найден\n")
+    except CsvTypeError as error:
+        print(f"Ожидался csv-файл\n"
+              f"Проверьте расширение файла: {error.value}\n")
+    except TxtTypeError as error:
+        print(f"Ожидался txt-файл\n"
+              f"Проверьте расширение файла: {error.value}\n")
+    except InTxtError as error:
+        print(f"Ошибка в .txt файле в строке: '{error.value}'\n"
+              f"Номер строки: {error.index * ITERATION_IN_TXT + 1}\n")
+    except InCsvError as error:
+        print(f"Ошибка в .csv файле в строке: '{error.index}'\n"
+              f"У {error.value} нет YouTube-никнейма\n")
 
 
 if __name__ == '__main__':
     main(sys.argv)
-    # main(["main.py", "Comments.txt",  "score.csv"])  # проверка наличия файла
-    # main(["main.py", "scoreboard.csv", "Comments.txt"])  # проверка корректности типа файла
+    main(["main.py", "Comments.txt",  "score.csv"])         # проверка FileError
+    main(["main.py", "scoreboard.csv", "scoreboard.csv"])   # проверка TxtTypeError
+    main(["main.py", "chat.txt", "chat.txt"])               # проверка CsvTypeError
+    main(["main.py", "err_chat.txt", "scoreboard.csv"])     # проверка InTxtError
+    main(["main.py", "chat.txt", "err_scoreboard.csv"])     # проверка InCsvError
+
