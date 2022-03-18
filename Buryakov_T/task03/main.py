@@ -1,59 +1,66 @@
-import sys
+ZERO_WIDTH_SPACE = '\u200b'
 
 
 class ParserYtError(Exception):
 
-    def __init__(self, value, string):
+    def __init__(self, value):
         self.value = value
-        self.string = string
 
 
 class ParserCsvError(Exception):
 
-    def __init__(self, value, string):
+    def __init__(self, value):
         self.value = value
-        self.string = string
 
 
 class IncorrectValueInFile(Exception):
 
-    def __init__(self, file, string):
+    def __init__(self, file, string, index):
         self.name_of_file = file
         self.string = string
+        self.index = index
+
+
+class IncorrectValueInCSV(Exception):
+
+    def __init__(self, file, string, index):
+        self.name_of_file = file
+        self.string = string
+        self.index = index
 
 
 def parser_yt_comments(name_of_file: str) -> dict:
     try:
-        with open(name_of_file, 'r') as file:
+        with open(name_of_file, 'rt') as file:
             sorted_comments = {}
-            for line in file:
-                if line not in '\n' and '\u200b' not in line:
-                    nickname = line.replace('\n', '')
-                elif line not in '\n' and '\u200b' in line:
-                    if nickname in sorted_comments.keys():
-                        sorted_comments[nickname].append(line.replace('\n', '').replace('\u200b', ''))
-                    else:
-                        sorted_comments[nickname] = [line.replace('\n', '').replace('\u200b', '')]
+            f = file.read().split('\n\n\n')
+            for i, line in enumerate(f):
+                name_and_comment = line.split('\n')
+                value = sorted_comments.setdefault(name_and_comment[0], list())
+                value.append(name_and_comment[1].replace(ZERO_WIDTH_SPACE, ''))
         return sorted_comments
     except FileNotFoundError:
-        raise ParserYtError(name_of_file, sys.exc_info()[2].tb_lineno)
+        raise ParserYtError(name_of_file)
+    except IndexError:
+        raise IncorrectValueInFile(name_of_file, line, i*4+1)
 
 
-def bond_name_nickname(name_of_file: str, dict_with_nick) -> dict:
+def bond_name_nickname(name_of_file: str, dict_with_nick: dict) -> dict:
     try:
         dict_of_bonds = {}
-        with open(name_of_file, 'r') as file:
-            for line in file:
+        with open(name_of_file, 'rt') as file:
+            for i, line in enumerate(file):
                 new_line = line.split(',')
-                if new_line[3] in dict_with_nick.keys():
-                    dict_of_bonds[new_line[3]] = new_line[1]
+                if new_line[3] in dict_with_nick:
+                    dict_of_bonds.setdefault(new_line[3], new_line[1])
+                    if dict_of_bonds[new_line[3]] == "":
+                        raise IncorrectValueInCSV(name_of_file, new_line[3], i+1)
         return dict_of_bonds
     except FileNotFoundError:
-        raise ParserCsvError(name_of_file, sys.exc_info()[2].tb_lineno)
-        pass
+        raise ParserCsvError(name_of_file)
 
 
-def stream_info(sorted_comments: dict, bonds: dict) -> list:
+def print_info(sorted_comments: dict, bonds: dict) -> list:
     full_info = []
     for key, values in sorted_comments.items():
         real_name = bonds[key]
@@ -74,15 +81,19 @@ def main(args: list):
     try:
         sorted_comments = parser_yt_comments(args[2])
         dict_of_bonds = bond_name_nickname(args[1], sorted_comments)
-        stream_info(sorted_comments, dict_of_bonds)
+        print_info(sorted_comments, dict_of_bonds)
     except ParserYtError as error:
-        print(f"This file: '{error.value}' is not exist in line {error.string}")
+        print(f"This file: '{error.value}' is not exist")
     except ParserCsvError as error:
-        print(f"This file: '{error.value}' is not exist in line {error.string}")
+        print(f"This file: '{error.value}' is not exist")
     except IncorrectValueInFile as error:
-        print(f"Parser YouTube comments in file: '{error.name_of_file}' is not working with line: '{error.string}'")
+        print(f"Parser YouTube comments in file: '{error.name_of_file}' is not working with: '{error.string}' "
+              f"in line: '{error.index}'")
+    except IncorrectValueInCSV as error:
+        print(f"False value in '{error.name_of_file}' with '{error.string}' in line '{error.index}'")
 
 
 if __name__ == '__main__':
     main(["main.py", "MLNI Group.csv", "Comments.txt"])
-
+    # main(["main.py", "MLNI Group.csv", "Comments bad.txt"])
+    # main(["main.py", "MLNI Group bad.csv", "Comments.txt"])
