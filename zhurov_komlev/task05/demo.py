@@ -11,7 +11,7 @@ class WeaponFire:
     weapon: str
 
     @classmethod
-    def from_data(cls, data:dict) -> "WeaponFire":
+    def from_data(cls, data: dict) -> "WeaponFire":
         return WeaponFire(
             player_name=data["playerName"],
             player_team=data["playerTeam"],
@@ -100,32 +100,32 @@ class Player:
     deaths: int
     assists: int
     acc: float
-    #hs: float
-    #adr: float
-    #ud: int
-    #kast: float
-    #rat2_0: float
+    # hs: float
+    # adr: float
+    # ud: int
+    # kast: float
+    # rat2_0: float
     team: str
 
     @classmethod
     def from_data(cls, name: str, rounds: List[Round]) -> "Player":
         team = get_player_team(rounds, name)
         acc = get_player_acc(rounds, name)
-        #hs = get_player_hs(rounds, name)
-        #adr = get_player_adr(rounds, name)
-        #ud = get_player_ud(rounds, name)
-        #kast = get_player_kast(rounds, name)
-        #rat2_0 = get_player_rat2_0(rounds, name)
+        # hs = get_player_hs(rounds, name)
+        # adr = get_player_adr(rounds, name)
+        # ud = get_player_ud(rounds, name)
+        # kast = get_player_kast(rounds, name)
+        # rat2_0 = get_player_rat2_0(rounds, name)
         kda = get_player_kda(rounds, name)
         return Player(
             name=name,
             team=team,
             acc=acc,
-            #hs=hs,
-            #adr=adr,
-            #ud=ud,
-            #kast=kast,
-            #rat2_0=rat2_0,
+            # hs=hs,
+            # adr=adr,
+            # ud=ud,
+            # kast=kast,
+            # rat2_0=rat2_0,
             kills=kda[0],
             deaths=kda[1],
             assists=kda[2]
