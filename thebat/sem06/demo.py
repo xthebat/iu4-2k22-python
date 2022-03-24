@@ -102,6 +102,79 @@ def _fix_rounds(rounds: List[Round]) -> List[Round]:
     return list(it for it in result if it.winner_team is not None)
 
 
+class MatchEncapsulated:
+
+    def __init__(self, match_id: str, map_name: str, rounds: List[Round] = None):
+        self.__match_id = match_id
+        self.__map_name = map_name
+        self.__rounds = rounds or list()
+
+    @classmethod
+    def from_data(cls, data: dict, fix_rounds: bool = True) -> "MatchEncapsulated":
+        rounds = [Round.from_data(it) for it in data["gameRounds"]]
+        return MatchEncapsulated(
+            match_id=data["matchID"],
+            map_name=data["mapName"],
+            rounds=rounds if not fix_rounds else _fix_rounds(rounds)
+        )
+
+    @property
+    def map_name(self):
+        return self.__map_name
+
+    @property
+    def match_id(self):
+        return self.__match_id
+
+    @property
+    def players(self):
+        for r in self.__rounds:
+            # ...
+            yield "player"
+
+    # Anti-pattern
+    # @match_id.setter
+    # def match_id(self, value):
+    #     self.__map_name = None
+    #     self.__rounds = list()
+    #     self.__match_id = value
+
+    def __getitem__(self, item: int):   # []
+        return self.__rounds[item - 1]
+
+    def __str__(self):  # str()
+        return f"Match(id={self.__match_id}, map={self.__map_name})"
+
+    def __repr__(self):  # repr()
+        return f"Match({self.__match_id})"
+
+    def __iter__(self):  # in
+        return self.__rounds.__iter__()
+
+    # def __iter__(self):  # in
+    #     return (it for it in self.__rounds)
+
+    # def __iter__(self):  # in
+    #     for it in self.__rounds:
+    #         yield it
+
+    def __eq__(self, other):
+        if not isinstance(other, MatchEncapsulated):
+            return False
+        return self.__match_id == other.__match_id
+
+    # def __ne__(self, other):
+    #     return "I don't know how to compare matches"
+
+    def print(self):
+        print("\n".join(str(it) for it in self.__rounds))
+
+    def reset(self, match_id: str):
+        self.__match_id = match_id
+        self.__map_name = None
+        self.__rounds = list()
+
+
 @dataclass
 class Match:
     match_id: str
