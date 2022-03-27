@@ -7,8 +7,9 @@ def main(args: list):
     with open(args[1], "rt") as file:
         text = file.read()
         data = json.loads(text)
+
     match = GameMatch.from_data(data)
-    match.print(args)
+    match.print()
 
 
 if __name__ == '__main__':
