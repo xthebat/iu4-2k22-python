@@ -1,0 +1,17 @@
+Match 1-bc6f4da7-e96b-4070-9a66-6392718d3ba6-1-1 MAP: de_inferno
+team_CJIadKOezka VS team_Nic0tinn
+First half:      8 : 7
+Second half:     8 : 4
+Final score:    16 : 11
+------------------------------------------------------------------------------------------------
+      Player             Team   K   D   A    ACC%     HS%      ADR      UD    KAST%   Rating 2.0
+      PaaStr team_CJIadKOezka  22  17   3   13.36    1.58    79.74   27.00    59.26         1.13
+    Nic0tinn    team_Nic0tinn  14  22   4   15.00    1.32    58.30  330.00    55.56         0.68
+      -mblw- team_CJIadKOezka  25  15   5   20.83    2.21    85.70    2.00    66.67         1.35
+      Alread    team_Nic0tinn  18  23   6   17.45    2.75    84.56  171.00    62.96         0.94
+    XELOSSSS team_CJIadKOezka  17  19   2   14.33    2.87    59.48  109.00    48.15         0.78
+       b4tuG    team_Nic0tinn  21  21   4   20.25    2.96    88.59  118.00    77.78         1.19
+      IvvvJJ    team_Nic0tinn  25  19   2   18.20    3.07    86.52  170.00    59.26         1.20
+     ep1cmax team_CJIadKOezka  16  22   8   18.80    1.25    84.11   79.00    59.26         0.87
+        _bta    team_Nic0tinn  14  21   2   12.93    2.64    53.78  180.00    55.56         0.68
+ CJIadKOezka team_CJIadKOezka  26  19   3   31.85    2.96    98.04   92.00    62.96         1.30
