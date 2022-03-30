@@ -67,12 +67,13 @@ class Match:
             for kill in cs_round.kills:
                 attacker = self.add_get_player(Player(kill.attacker_name, kill.attacker_team))
                 victim = self.add_get_player(Player(kill.victim_name, kill.victim_team))
-                assister = self.add_get_player(Player(kill.assister_name, kill.assister_team))
+                if kill.assister_name is not None:
+                    assister = self.add_get_player(Player(kill.assister_name, kill.assister_team))
+                    assister.assists += 1
 
                 attacker.shots_done += 1
                 attacker.kills += 1
                 victim.deaths += 1
-                assister.assists += 1
 
                 if kill.is_trade and kill.trader_name == attacker.name:
                     attacker.trades += 1
