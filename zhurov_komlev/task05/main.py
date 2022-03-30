@@ -19,8 +19,7 @@ def main(args: list):
             text = file.read()
             data = json.loads(text)
 
-        match = Match.from_data(data)
-        # match.players_print()
+        match = Match.from_data(data, sort_by_rating=True)
         match.print_statistics()
 
         print("\n--------- test5v5.json ---------")
@@ -29,8 +28,7 @@ def main(args: list):
             text = file.read()
             data = json.loads(text)
 
-        match = Match.from_data(data)
-        # match.players_print()
+        match = Match.from_data(data, sort_by_rating=True)
         match.print_statistics()
 
 

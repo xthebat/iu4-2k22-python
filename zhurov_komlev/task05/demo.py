@@ -274,12 +274,17 @@ class Match:
     statistics: List[Statistics]
 
     @classmethod
-    def from_data(cls, data: dict, fix_rounds: bool = True) -> "Match":
+    def from_data(cls, data: dict, fix_rounds: bool = True, sort_by_rating: bool = False, ) -> "Match":
         rounds = [Round.from_data(it) for it in data["gameRounds"]]
         nicknames = cls.get_players_nicknames(data)
         rounds = cls._fix_rounds(rounds)
         players = [Player.from_data(it, cls._fix_rounds(rounds)) for it in nicknames]
+
         statistics = [Statistics.from_data(it, cls._fix_rounds(rounds)) for it in nicknames]
+        if sort_by_rating:
+            statistics = sorted(statistics, key=lambda x: x.rat2_0)
+            statistics.reverse()
+
         if len(players) > 4:
             team_a, team_b = cls.get_match_score(rounds, 15)
         else:
@@ -372,7 +377,7 @@ class Match:
 
     def print_statistics(self):
         print(f"Match: {self.match_id} MAP: {self.map_name}")
-        print(f" {self.team_a[3]} VS {self.team_b[3]}")
+        print(f"{self.team_a[3]} VS {self.team_b[3]}")
         print("First half: {w:3d} : {l:d}".format(w=self.team_a[1], l=self.team_b[1]))
         print("Second half: {w:2d} : {l:d}".format(w=self.team_a[2], l=self.team_b[2]))
         print("Final score: {w:1d} : {l:d}".format(w=self.team_a[0], l=self.team_b[0]))
