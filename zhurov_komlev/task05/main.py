@@ -1,7 +1,7 @@
 import json
 import sys
 
-from demo import Round, Match, Player
+from demo import Match
 
 
 def main(args: list):
