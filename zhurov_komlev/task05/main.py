@@ -1,7 +1,5 @@
 import json
-import os
 import sys
-from typing import Iterable, List
 
 from demo import Round, Match, Player
 

@@ -1,8 +1,9 @@
 from dataclasses import dataclass
-from typing import List, Iterable
+from typing import List
 
 INVALID_STEAM_ID = 0
 FLOAT_AVERAGING = 2
+GRENADES = ["Molotov", "Smoke Grenade", "HE Grenade", "Incendiary Grenade", "Flashbang", "Decoy Grenade"]
 
 
 @dataclass
@@ -103,6 +104,19 @@ class Round:
 @dataclass
 class Player:
     name: str
+    team: str
+
+    @classmethod
+    def from_data(cls, name: str, rounds: List[Round]) -> "Player":
+        team = get_player_team(rounds, name)
+        return Player(
+            name=name,
+            team=team
+        )
+
+
+@dataclass
+class Statistics(Player):
     kills: int
     deaths: int
     assists: int
@@ -112,10 +126,9 @@ class Player:
     ud: int
     kast: float
     # rat2_0: float
-    team: str
 
     @classmethod
-    def from_data(cls, name: str, rounds: List[Round]) -> "Player":
+    def from_data(cls, name: str, rounds: List[Round]) -> "Statistics":
         kda = get_player_kda(rounds, name)
         team = get_player_team(rounds, name)
         acc = get_player_acc(rounds, name)
@@ -124,7 +137,7 @@ class Player:
         ud = get_player_ud(rounds, name)
         kast = get_player_kast(rounds, name)
         # rat2_0 = get_player_rat2_0(rounds, name)
-        return Player(
+        return Statistics(
             name=name,
             team=team,
             acc=acc,
@@ -145,6 +158,7 @@ class Match:
     map_name: str
     rounds: List[Round]
     players: List[Player]
+    statistics: List[Statistics]
 
     @classmethod
     def from_data(cls, data: dict, fix_rounds: bool = True) -> "Match":
@@ -152,15 +166,17 @@ class Match:
         nicknames = get_players_nicknames(data)
         rounds = _fix_rounds(rounds)
         players = [Player.from_data(it, _fix_rounds(rounds)) for it in nicknames]
+        statistics = [Statistics.from_data(it, _fix_rounds(rounds)) for it in nicknames]
         return Match(
             match_id=data["matchID"],
             map_name=data["mapName"],
             rounds=rounds if not fix_rounds else _fix_rounds(rounds),
-            players=players
+            players=players,
+            statistics=statistics
         )
 
     def players_print(self):
-        print("\n".join(str(it) for it in self.players))
+        print("\n".join(str(it) for it in self.statistics))
 
 
 def get_players_nicknames(data: dict):
@@ -186,8 +202,8 @@ def get_players_nicknames(data: dict):
 
 
 def get_player_team(rounds: List[Round], name: str):
-    for num_round in rounds:
-        kills = num_round.kills
+    for game_round in rounds:
+        kills = game_round.kills
         for kill in kills:
             if kill.attacker_name == name:
                 return kill.attacker_team
@@ -213,26 +229,20 @@ def _fix_rounds(rounds: List[Round]) -> List[Round]:
 
 
 def get_player_acc(rounds: List[Round], name: str):
-    shoots = 0
-    hits = 0
-    for num_round in rounds:
-        damages = num_round.damages
-        for damage in damages:
-            if damage.attacker_name == name:
-                hits += 1
-        for shoot in num_round.weapon_fires:
-            if shoot.player_name == name and shoot.weapon.find('grenade') == -1:
-                shoots += 1
-    if shoots:
-        return round(shoots/hits, FLOAT_AVERAGING)
-    else:
-        return 0
+    hits_count = 0
+    fires_count = 0
+    for game_round in rounds:
+        hits = [filter(lambda it: it.attacker_name == name, game_round.damages)]
+        fires = [filter(lambda it: it.player_name == name and not is_grenade(it.weapon), game_round.damages)]
+        hits_count += len(hits)
+        fires_count += len(fires)
+    return hits_count / fires_count if fires_count != 0 else 0
 
 
 def get_player_kda(rounds: List[Round], name: str) -> list:
     kda = [0, 0, 0]
-    for num_round in rounds:
-        kills = num_round.kills
+    for game_round in rounds:
+        kills = game_round.kills
         for kill in kills:
             if kill.suicide and kill.attacker_name == name:
                 kda[0] -= 1
@@ -251,8 +261,8 @@ def get_player_hs(rounds: List[Round], name: str, death: int) -> float:
         return 0
 
     hs_count = 0
-    for num_round in rounds:
-        kills = num_round.kills
+    for game_round in rounds:
+        kills = game_round.kills
         for kill in kills:
             if kill.attacker_name == name and kill.headshot:
                 hs_count += 1
@@ -262,8 +272,8 @@ def get_player_hs(rounds: List[Round], name: str, death: int) -> float:
 def get_player_adr(rounds: List[Round], name: str) -> float:
     damage_count = 0
     rounds_count = len(rounds)
-    for num_round in rounds:
-        damages = num_round.damages
+    for game_round in rounds:
+        damages = game_round.damages
         for damage in damages:
             if damage.attacker_name == name:
                 damage_count += damage.hp_damage_taken
@@ -272,25 +282,23 @@ def get_player_adr(rounds: List[Round], name: str) -> float:
 
 def get_player_ud(rounds: List[Round], name: str) -> int:
     damage_count = 0
-    for num_round in rounds:
-        damages = num_round.damages
+    for game_round in rounds:
+        damages = game_round.damages
         for damage in damages:
             if damage.attacker_name == name and damage.weapon == "HE Grenade":
                 damage_count += damage.hp_damage_taken
     return damage_count
 
 
-# процент от раундов, когда игрок сделал убийство, ассист или выжил,
-# а также случаи когда его разменяли сразу после смерти
 def get_player_kast(rounds: List[Round], name: str) -> float:
     kast_count = 0
     rounds_count = len(rounds)
-    for num_round in rounds:
+    for game_round in rounds:
         useful = False    # kill or assist
         survive = True
         trade_after_death = False
 
-        kills = num_round.kills
+        kills = game_round.kills
         for kill in kills:
             if kill.attacker_name == name or kill.assister_name == name:
                 useful = True
@@ -304,6 +312,12 @@ def get_player_kast(rounds: List[Round], name: str) -> float:
 
     return round(kast_count/rounds_count, FLOAT_AVERAGING)
 
+
+def is_grenade(weapon: str):
+    if weapon in GRENADES:
+        return False
+    else:
+        return True
 
 # Статья с формулой рейтинга 2.0
 # https://escorenews.com/ru/csgo/news/14681-fanat-cs-go-nashel-formulu-reytinga-2-0-ot-hltv-teper-vy-mojete-poschitat-svoy-sobstvennyj
@@ -328,4 +342,3 @@ def get_player_kast(rounds: List[Round], name: str) -> float:
 #     kills = kda[0],
 #     deaths = kda[1],
 #     assists = kda[2]
-
