@@ -128,6 +128,8 @@ class Statistics(Player):
 
     @classmethod
     def from_data(cls, name: str, rounds: List[Round]) -> "Statistics":
+        rounds_count = len(rounds)
+
         kills, deaths, assists = cls.get_player_kda(rounds, name)
         team = get_player_team(rounds, name)
         acc = cls.get_player_acc(rounds, name)
@@ -135,7 +137,9 @@ class Statistics(Player):
         adr = cls.get_player_adr(rounds, name)
         ud = get_player_ud(rounds, name)
         kast = get_player_kast(rounds, name)
+        kast_rate = kast / rounds_count
         rat2_0 = cls.get_player_rat2_0(kast, kills, deaths, assists, adr, len(rounds))
+
         return Statistics(
             name=name,
             team=team,
@@ -146,11 +150,13 @@ class Statistics(Player):
             hs=round(hs, 2),
             adr=round(adr, 2),
             ud=ud,
-            kast=round(kast, 2),
+            kast=round(kast_rate, 2),
             rat2_0=round(rat2_0, 2)
         )
 
     @staticmethod
+    # Статья с формулой рейтинга 2.0
+    # https://escorenews.com/ru/csgo/news/14681-fanat-cs-go-nashel-formulu-reytinga-2-0-ot-hltv-teper-vy-mojete-poschitat-svoy-sobstvennyj
     def get_player_rat2_0(kast: float, kills: int, deaths: int, assists: int, adr: float, count_of_rounds: int):
         kpr = kills / count_of_rounds
         dpr = deaths / count_of_rounds
@@ -304,7 +310,6 @@ def get_player_ud(rounds: List[Round], name: str) -> int:
 
 def get_player_kast(rounds: List[Round], name: str) -> float:
     kast_count = 0
-    rounds_count = len(rounds)
     for game_round in rounds:
         useful = False
         survive = True
@@ -322,7 +327,7 @@ def get_player_kast(rounds: List[Round], name: str) -> float:
         if useful or survive or (trade_after_death and not survive):
             kast_count += 1
 
-    return kast_count/rounds_count
+    return kast_count
 
 
 def is_grenade(weapon: str):
@@ -330,27 +335,3 @@ def is_grenade(weapon: str):
         return True
     else:
         return False
-
-# Статья с формулой рейтинга 2.0
-# https://escorenews.com/ru/csgo/news/14681-fanat-cs-go-nashel-formulu-reytinga-2-0-ot-hltv-teper-vy-mojete-poschitat-svoy-sobstvennyj
-# RAT2_0 = 0.0073 * KAST + 0.3591 * KPR - 0.5329 * DPR + 0.2372 * Impact + 0.0032 * ADR + 0.1587
-# Impact = 2.13 * KPR + 0.32 * (Assists per round) -0.41
-# def get_player_rat2_0(rounds: List[Round], name: str):
-#       0.0073 * KAST \
-#     + 0.3591 * KPR \
-#     - 0.5329 * DPR \
-#     + 0.2372 * Impact \
-#     + 0.0032 * ADR \
-#     + 0.1587
-#
-#     name = name,
-#     team = team,
-#     acc = acc,
-#     # hs=hs,
-#     # adr=adr,
-#     # ud=ud,
-#     # kast=kast,
-#     rat2_0 = rat2_0,
-#     kills = kda[0],
-#     deaths = kda[1],
-#     assists = kda[2]
