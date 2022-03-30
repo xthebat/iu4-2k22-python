@@ -50,9 +50,9 @@ class Match:
         print(f"Match {self.match_id} {self.map_name}")
         print(f"{self.rounds[0].win_team} vs {self.rounds[0].lose_team}")
         print(f"First Half:  {half_round.score._end_ct_score} : {half_round.score._end_t_score}")
-        print(f"Second Half: {last_round.score._end_ct_score} : {last_round.score._end_t_score}")
-        print(f"Final score: {half_round.score._end_ct_score + last_round.score._end_ct_score} :",
-              f"{half_round.score._end_t_score + last_round.score._end_t_score}")
+        print(f"Second Half: {last_round.score._end_t_score - half_round.score._end_ct_score} :",
+              f"{last_round.score._end_ct_score - half_round.score._end_t_score}")
+        print(f"Final score: {last_round.score._end_t_score} : {last_round.score._end_ct_score}")
         print("     Player")
         for player in self.players:
             headshots_rate = player.headshots / player.kills if player.kills != 0 else 0
@@ -139,8 +139,8 @@ class Round:
             self.fires.append(fire)
 
     def is_normal(self):
-        return self.score._t_score != self.score._end_t_score or \
-               self.score._ct_score != self.score._end_ct_score
+        return self.score._end_t_score > self.score._t_score or \
+               self.score._end_ct_score > self.score._ct_score
 
 
 class Kill:
