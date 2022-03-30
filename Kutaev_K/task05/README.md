@@ -14,7 +14,6 @@
 Описывает команду, принимающую участие в игре
 
 * `name` - имя команды
-* `score` - количество выигрышных раундов
 * `players_list[]` - список игроков команды
 
 **Класс Player**
@@ -23,14 +22,7 @@
 
 * `steam_id` - Steam ID игрока
 * `name` - имя игрока
-* `kills_count` - количество убийств
-* `death_count` - количество смертей
-* `assist_count` - количество ассистов
-* `accuracy` - точность
-* `headshot_count` - количество headshot-ов
-* `hs_percent` - процент headshot-ов
-* `average_round_damage` - средний урон за раунд
-* `utility_damage` - урон гранатами
+* `team_name` - название команды
 
 **Класс Half**
 
@@ -88,3 +80,46 @@
 
 * `attacker_steam_id` - Steam ID атакующего игрока
 * `weapon` - орудие
+
+## Классы для подсчета статистики
+
+**Класс Statistics**
+
+Описывает полученную статистику 
+
+* teams_list - список команд
+
+**Класс TeamStats**  (наследуемся от Team)
+
+Описывает статистику по команде
+
+- `name` - имя команды
+- `players_list[]` - список игроков команды
+
+Новые
+
+* first_half_score
+* second_half_score
+* final_score
+
+**Класс PlayerStats** (наследуемся от Player)
+
+Описывает статистику игрока
+
+- `steam_id` - Steam ID игрока
+- `name` - имя игрока
+- `team_name` - название команды
+
+Новые
+
+* kills_count
+* death_count
+* assist_count
+* accuracy
+* hs_percent
+* average_round_damage
+* utility_damage
+* kast
+* rating_2_0
+
+

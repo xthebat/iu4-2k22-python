@@ -9,7 +9,16 @@ PLAYERS_COUNT_5_X_5: int = 10
 PLAYERS_COUNT_2_X_2: int = 4
 FIRST_HALF: int = 1
 SECOND_HALF: int = 2
+FIRST_HALF_IN_LIST: int = 0
+SECOND_HALF_IN_LIST: int = 1
 CONNECTION_ROUND: int = 1
 EMPTY: str = ""
 MIN_PLAYERS_COUNT: int = 2
 MIN_GOOD_ROUNDS: int = 1
+HEADSHOT: int = 1
+LAST: int = -1
+GRENADES: list = ["HE Grenade", "Frag Grenade", "Molotov", "Incendiary Grenade", "Fire Bomb"]
+TEAM_A: int = 0
+TEAM_B: int = 1
+IN_PERCENT: int = 100
+

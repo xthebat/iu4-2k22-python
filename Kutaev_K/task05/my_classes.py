@@ -26,7 +26,7 @@ class WeaponFire:
 class Damage:
     attacker_steam_id: int
     hp_damage_taken: int
-    armor_damage: int
+    armor_damage_taken: int
     weapon: str
 
     @classmethod
@@ -37,7 +37,7 @@ class Damage:
                 Damage(
                     attacker_steam_id=damage["attackerSteamID"],
                     hp_damage_taken=damage["hpDamageTaken"],
-                    armor_damage=damage["armorDamage"],
+                    armor_damage_taken=damage["armorDamageTaken"],
                     weapon=damage["weapon"]
                 )
             )
@@ -95,7 +95,7 @@ class Kill:
 @dataclass
 class Round:
     number: int
-    winner: int
+    winner: str
     kills_list: List[Kill]
     grenades_list: List[Grenade]
     damage_list: List[Damage]
@@ -170,21 +170,17 @@ class Half:
                 return halves_list
         raise TeamError(ct_team_loc)
 
+    @classmethod
+    def calc_half_stat(cls, team_name: str, half: "Half") -> int:
+        counter: int = len([my_round for my_round in half.rounds_list if my_round.winner == team_name])
+        return counter
+
 
 @dataclass
 class Player:
     steam_id: int
     name: str
     team_name: str
-
-    kills_count: int = 0
-    death_count: int = 0
-    assist_count: int = 0
-    accuracy: float = 0
-    headshot_count: int = 0
-    hs_percent: float = 0
-    average_round_damage: int = 0
-    utility_damage: int = 0
 
     @classmethod
     def data_to_players(cls, data_rounds: list, players_steam_ids: list) -> List["Player"]:
@@ -242,8 +238,6 @@ class Team:
     name: str
     players_list: List[Player]
 
-    score: int = 0
-
     @classmethod
     def data_to_teams(cls, good_rounds: list, match_type: int) -> List["Team"]:
         teams_list: List["Team"] = list()
@@ -298,4 +292,144 @@ class Match:
                     type=match_type_loc,
                     teams_list=team_list_loc,
                     halves_list=halves_list_loc
+        )
+
+
+@dataclass
+class PlayerStats(Player):
+    kills_count: int
+    deaths_count: int
+    assist_count: int
+    accuracy: float
+    hs_percent: float
+    average_round_damage: float
+    utility_damage: int
+    kast: float
+    rating_2_0: int = 0
+
+    @classmethod
+    def calc_player_stats(cls, halves_list: List["Half"], player: Player) -> "PlayerStats":
+        kills_count_loc: int = 0
+
+        deaths_count_loc: int = 0
+        is_dead_round: int = 0
+
+        assist_count_loc: int = 0
+
+        headshot_count: int = 0
+
+        weapon_damages_count: int = 0
+        weapon_damages: int = 0
+        weapon_fires_count: int = 0
+
+        grenade_damage: int = 0
+
+        is_kast: int = 0
+        kast_count: int = 0
+        rounds_count: int = 0
+
+        for half in halves_list:
+            for my_round in half.rounds_list:
+                for kill in my_round.kills_list:
+                    if kill.attacker_steam_id == player.steam_id:
+                        kills_count_loc += 1
+                        is_kast = 1
+                        if kill.is_headshot == HEADSHOT:
+                            headshot_count += 1
+                    if kill.victim_steam_id == player.steam_id:
+                        deaths_count_loc += 1
+                        is_dead_round = 1
+                    if kill.assister_steam_id == player.steam_id:
+                        assist_count_loc += 1
+                        is_kast = 1
+                    if kill.traded_steam_id == player.steam_id:
+                        is_kast = 1
+                    if kill == my_round.kills_list[LAST] and is_dead_round == 0:
+                        is_kast = 1
+                for damage in my_round.damage_list:
+                    if damage.attacker_steam_id == player.steam_id:
+                        if GRENADES.count(damage.weapon):
+                            grenade_damage += damage.hp_damage_taken + damage.armor_damage_taken
+                        else:
+                            weapon_damages_count += 1
+                            weapon_damages += damage.hp_damage_taken + damage.armor_damage_taken
+                for weapon_fire in my_round.weapon_fires_list:
+                    if weapon_fire.player_steam_id == player.steam_id and not GRENADES.count(weapon_fire.weapon):
+                        weapon_fires_count += 1
+                if is_kast == 1:
+                    kast_count += 1
+                is_kast = 0
+                is_dead_round = 0
+                rounds_count += 1
+
+        if weapon_fires_count == 0:
+            weapon_fires_count = 1
+            weapon_damages_count = 0
+        if kills_count_loc == 0:
+            hs_percent_loc: float = 0
+        else:
+            hs_percent_loc: float = round(headshot_count/kills_count_loc, 3)
+        if rounds_count == 0:
+            rounds_count = 1
+            weapon_damages = 0
+            grenade_damage = 0
+            kast_count = 0
+
+        return PlayerStats(
+            steam_id=player.steam_id,
+            name=player.name,
+            team_name=player.team_name,
+            kills_count=kills_count_loc,
+            deaths_count=deaths_count_loc,
+            assist_count=assist_count_loc,
+            accuracy=round(weapon_damages_count/weapon_fires_count * IN_PERCENT, 2),
+            hs_percent=round(hs_percent_loc * IN_PERCENT, 2),
+            average_round_damage=round((weapon_damages + grenade_damage)/rounds_count * IN_PERCENT, 2),
+            utility_damage=grenade_damage,
+            kast=round(kast_count/rounds_count * IN_PERCENT, 2)
+        )
+
+    @classmethod
+    def calc_players_stats(cls, halves_list: List["Half"], team: Team) -> List["PlayerStats"]:
+        player_stats_list: List[PlayerStats] = list()
+
+        for player in team.players_list:
+            player_stats_list.append(PlayerStats.calc_player_stats(halves_list, player))
+        return player_stats_list
+
+
+@dataclass
+class TeamStats:
+    name: str
+    player_stats_list: List[PlayerStats]
+    first_half_score: int
+    second_half_score: int
+    final_score: int
+
+    @classmethod
+    def calc_team_stats(cls, match: Match) -> List["TeamStats"]:
+        team_stats_list: List[TeamStats] = list()
+        for team in match.teams_list:
+            first_half_score_loc: int = Half.calc_half_stat(team.name, match.halves_list[FIRST_HALF_IN_LIST])
+            second_half_score_loc: int = Half.calc_half_stat(team.name, match.halves_list[SECOND_HALF_IN_LIST])
+            team_stats_list.append(
+                TeamStats(
+                    name=team.name,
+                    first_half_score=first_half_score_loc,
+                    second_half_score=second_half_score_loc,
+                    final_score=first_half_score_loc + second_half_score_loc,
+                    player_stats_list=PlayerStats.calc_players_stats(match.halves_list, team)
+                )
+            )
+        return team_stats_list
+
+
+@dataclass
+class Statistics:
+    teams_list: List[TeamStats]
+
+    @classmethod
+    def calculate_stats(cls, match: Match) -> "Statistics":
+        return Statistics(
+            teams_list=TeamStats.calc_team_stats(match)
         )
