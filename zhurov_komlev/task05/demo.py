@@ -107,11 +107,22 @@ class Player:
 
     @classmethod
     def from_data(cls, name: str, rounds: List[Round]) -> "Player":
-        team = get_player_team(rounds, name)
+        team = cls.get_player_team(rounds, name)
         return Player(
             name=name,
             team=team
         )
+
+    @staticmethod
+    def get_player_team(rounds: List[Round], name: str):
+        for game_round in rounds:
+            kills = game_round.kills
+            for kill in kills:
+                if kill.attacker_name == name:
+                    return kill.attacker_team
+                if kill.victim_name == name:
+                    return kill.victim_team
+        raise ValueError("Team can't be here")
 
 
 @dataclass
@@ -129,17 +140,15 @@ class Statistics(Player):
     @classmethod
     def from_data(cls, name: str, rounds: List[Round]) -> "Statistics":
         rounds_count = len(rounds)
-
         kills, deaths, assists = cls.get_player_kda(rounds, name)
-        team = get_player_team(rounds, name)
+        team = Player.get_player_team(rounds, name)
         acc = cls.get_player_acc(rounds, name)
         hs = cls.get_player_hs(rounds, name, kills)
         adr = cls.get_player_adr(rounds, name)
-        ud = get_player_ud(rounds, name)
-        kast = get_player_kast(rounds, name)
-        kast_rate = kast / rounds_count
-        rat2_0 = cls.get_player_rat2_0(kast, kills, deaths, assists, adr, len(rounds))
-
+        ud = cls.get_player_ud(rounds, name)
+        kast_count = cls.get_player_kast(rounds, name)
+        kast = kast_count / rounds_count
+        rat2_0 = cls.get_player_rat2_0(kast_count, kills, deaths, assists, adr, len(rounds))
         return Statistics(
             name=name,
             team=team,
@@ -150,19 +159,17 @@ class Statistics(Player):
             hs=round(hs, 2),
             adr=round(adr, 2),
             ud=ud,
-            kast=round(kast_rate, 2),
+            kast=round(kast, 2),
             rat2_0=round(rat2_0, 2)
         )
 
     @staticmethod
-    # Статья с формулой рейтинга 2.0
-    # https://escorenews.com/ru/csgo/news/14681-fanat-cs-go-nashel-formulu-reytinga-2-0-ot-hltv-teper-vy-mojete-poschitat-svoy-sobstvennyj
-    def get_player_rat2_0(kast: float, kills: int, deaths: int, assists: int, adr: float, count_of_rounds: int):
+    def get_player_rat2_0(kast_count: float, kills: int, deaths: int, assists: int, adr: float, count_of_rounds: int):
         kpr = kills / count_of_rounds
         dpr = deaths / count_of_rounds
         apr = assists / count_of_rounds
         impact = 2.13 * kpr + 0.42 * apr - 0.41
-        rat2_0 = 0.0073 * kast + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * adr + 0.1587
+        rat2_0 = 0.0073 * kast_count + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * adr + 0.1587
         return rat2_0
 
     @staticmethod
@@ -221,6 +228,35 @@ class Statistics(Player):
                     damage_count += damage.hp_damage_taken
         return damage_count / rounds_count
 
+    @staticmethod
+    def get_player_ud(rounds: List[Round], name: str) -> int:
+        damage_count = 0
+        for game_round in rounds:
+            damages = game_round.damages
+            for damage in damages:
+                if damage.attacker_name == name and damage.weapon == "HE Grenade":
+                    damage_count += damage.hp_damage_taken
+        return damage_count
+
+    @staticmethod
+    def get_player_kast(rounds: List[Round], name: str) -> float:
+        kast_count = 0
+        for game_round in rounds:
+            useful = False
+            survive = True
+            trade_after_death = False
+            kills = game_round.kills
+            for kill in kills:
+                if kill.attacker_name == name or kill.assister_name == name:
+                    useful = True
+                elif kill.victim_name == name:
+                    survive = False
+                elif kill.player_traded_name == name:
+                    trade_after_death = True
+            if useful or survive or (trade_after_death and not survive):
+                kast_count += 1
+        return kast_count
+
 
 @dataclass
 class Match:
@@ -233,7 +269,7 @@ class Match:
     @classmethod
     def from_data(cls, data: dict, fix_rounds: bool = True) -> "Match":
         rounds = [Round.from_data(it) for it in data["gameRounds"]]
-        nicknames = get_players_nicknames(data)
+        nicknames = cls.get_players_nicknames(data)
         rounds = _fix_rounds(rounds)
         players = [Player.from_data(it, _fix_rounds(rounds)) for it in nicknames]
         statistics = [Statistics.from_data(it, _fix_rounds(rounds)) for it in nicknames]
@@ -245,41 +281,30 @@ class Match:
             statistics=statistics
         )
 
+    @staticmethod
+    def get_players_nicknames(data: dict):
+        steam_ids = set()
+        player_connections = data["playerConnections"]
+        for player_connection in player_connections:
+            steam_id = player_connection["steamID"]
+            if steam_id != INVALID_STEAM_ID:
+                steam_ids.add(steam_id)
+        player_count = len(steam_ids)
+        nicknames = set()
+        game_rounds = data["gameRounds"]
+        for game_round in game_rounds:
+            kills = game_round["kills"]
+            for kill in kills:
+                attacker = kill["attackerName"]
+                victim = kill["victimName"]
+                nicknames.add(attacker)
+                nicknames.add(victim)
+                if len(nicknames) == player_count:
+                    return nicknames
+        raise ValueError("Player can't be here!")
+
     def players_print(self):
         print("\n".join(str(it) for it in self.statistics))
-
-
-def get_players_nicknames(data: dict):
-    steam_ids = set()
-    player_connections = data["playerConnections"]
-    for player_connection in player_connections:
-        steam_id = player_connection["steamID"]
-        if steam_id != INVALID_STEAM_ID:
-            steam_ids.add(steam_id)
-    player_count = len(steam_ids)
-    nicknames = set()
-    game_rounds = data["gameRounds"]
-    for game_round in game_rounds:
-        kills = game_round["kills"]
-        for kill in kills:
-            attacker = kill["attackerName"]
-            victim = kill["victimName"]
-            nicknames.add(attacker)
-            nicknames.add(victim)
-            if len(nicknames) == player_count:
-                return nicknames
-    raise ValueError("Player can't be here!")
-
-
-def get_player_team(rounds: List[Round], name: str):
-    for game_round in rounds:
-        kills = game_round.kills
-        for kill in kills:
-            if kill.attacker_name == name:
-                return kill.attacker_team
-            if kill.victim_name == name:
-                return kill.victim_team
-    raise ValueError("Team can't be here")
 
 
 def _game_start_index(rounds: List[Round]):
@@ -296,38 +321,6 @@ def _fix_rounds(rounds: List[Round]) -> List[Round]:
     for it in result:
         it.num -= start_number
     return list(it for it in result if it.winner_team is not None)
-
-
-def get_player_ud(rounds: List[Round], name: str) -> int:
-    damage_count = 0
-    for game_round in rounds:
-        damages = game_round.damages
-        for damage in damages:
-            if damage.attacker_name == name and damage.weapon == "HE Grenade":
-                damage_count += damage.hp_damage_taken
-    return damage_count
-
-
-def get_player_kast(rounds: List[Round], name: str) -> float:
-    kast_count = 0
-    for game_round in rounds:
-        useful = False
-        survive = True
-        trade_after_death = False
-
-        kills = game_round.kills
-        for kill in kills:
-            if kill.attacker_name == name or kill.assister_name == name:
-                useful = True
-            elif kill.victim_name == name:
-                survive = False
-            elif kill.player_traded_name == name:
-                trade_after_death = True
-
-        if useful or survive or (trade_after_death and not survive):
-            kast_count += 1
-
-    return kast_count
 
 
 def is_grenade(weapon: str):
