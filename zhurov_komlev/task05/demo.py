@@ -78,6 +78,7 @@ class Round:
     ct_score: int
     winner_team: str
     winner_side: str
+    loser_team: str
     kills: List[Kill]
     damages: List[Damage]
     weapon_fires: List[WeaponFire]
@@ -94,6 +95,7 @@ class Round:
             ct_score=data["ctScore"],
             winner_team=data["winningTeam"],
             winner_side=data["winningSide"],
+            loser_team=data["losingTeam"],
             kills=kills,
             damages=damages,
             weapon_fires=weapon_fires
@@ -170,7 +172,10 @@ class Statistics(Player):
         apr = assists / count_of_rounds
         impact = 2.13 * kpr + 0.42 * apr - 0.41
         rat2_0 = 0.0073 * kast_count + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * adr + 0.1587
-        return rat2_0
+        if rat2_0 < 0:
+            return 0
+        else:
+            return rat2_0
 
     @staticmethod
     def get_player_kda(rounds: List[Round], name: str):
@@ -262,6 +267,8 @@ class Statistics(Player):
 class Match:
     match_id: str
     map_name: str
+    team_a: list
+    team_b: list
     rounds: List[Round]
     players: List[Player]
     statistics: List[Statistics]
@@ -270,15 +277,21 @@ class Match:
     def from_data(cls, data: dict, fix_rounds: bool = True) -> "Match":
         rounds = [Round.from_data(it) for it in data["gameRounds"]]
         nicknames = cls.get_players_nicknames(data)
-        rounds = _fix_rounds(rounds)
-        players = [Player.from_data(it, _fix_rounds(rounds)) for it in nicknames]
-        statistics = [Statistics.from_data(it, _fix_rounds(rounds)) for it in nicknames]
+        rounds = cls._fix_rounds(rounds)
+        players = [Player.from_data(it, cls._fix_rounds(rounds)) for it in nicknames]
+        statistics = [Statistics.from_data(it, cls._fix_rounds(rounds)) for it in nicknames]
+        if len(players) > 4:
+            team_a, team_b = cls.get_match_score(rounds, 15)
+        else:
+            team_a, team_b = cls.get_match_score(rounds, 8)
         return Match(
             match_id=data["matchID"],
             map_name=data["mapName"],
-            rounds=rounds if not fix_rounds else _fix_rounds(rounds),
+            rounds=rounds if not fix_rounds else cls._fix_rounds(rounds),
             players=players,
-            statistics=statistics
+            statistics=statistics,
+            team_a=team_a,
+            team_b=team_b
         )
 
     @staticmethod
@@ -303,24 +316,74 @@ class Match:
                     return nicknames
         raise ValueError("Player can't be here!")
 
+    @staticmethod
+    def _game_start_index(rounds: List[Round]):
+        for index, it in enumerate(reversed(rounds)):
+            if it.t_score == 0 and it.ct_score == 0:
+                return len(rounds) - index - 1
+        raise IndexError("Can't find valid start round")
+
+    @classmethod
+    def _fix_rounds(cls, rounds: List[Round]) -> List[Round]:
+        start_index = cls._game_start_index(rounds)
+        start_number = rounds[start_index].num - 1
+        result = rounds[start_index:]
+        for it in result:
+            it.num -= start_number
+        return list(it for it in result if it.winner_team is not None)
+
+    @staticmethod
+    def get_match_score(rounds: List[Round], half_score: int):
+        first_half = half_score
+        score_team_a = 0
+        score_team_b = 0
+        first_half_score_team_a = 0
+        first_half_score_team_b = 0
+        game_round = []
+        for game_round in rounds:
+            sum_score = score_team_a + score_team_b
+            if sum_score == first_half:
+                first_half_score_team_a = score_team_a
+                first_half_score_team_b = score_team_b
+            if sum_score < first_half:
+                if game_round.winner_side == "CT":
+                    score_team_a += 1
+                else:
+                    score_team_b += 1
+            elif sum_score < first_half * 2:
+                if game_round.winner_side == "T":
+                    score_team_a += 1
+                else:
+                    score_team_b += 1
+        second_half_score_team_a = score_team_a - first_half_score_team_a
+        second_half_score_team_b = score_team_b - first_half_score_team_b
+        team_a_info = [score_team_a, first_half_score_team_a, second_half_score_team_a]
+        team_b_info = [score_team_b, first_half_score_team_b, second_half_score_team_b]
+        if score_team_a > score_team_b:
+            team_a_info.append(game_round.winner_team)
+            team_b_info.append(game_round.loser_team)
+        else:
+            team_a_info.append(game_round.loser_team)
+            team_b_info.append(game_round.winner_team)
+        return team_a_info, team_b_info
+
     def players_print(self):
         print("\n".join(str(it) for it in self.statistics))
 
-
-def _game_start_index(rounds: List[Round]):
-    for index, it in enumerate(reversed(rounds)):
-        if it.t_score == 0 and it.ct_score == 0:
-            return len(rounds) - index - 1
-    raise IndexError("Can't find valid start round")
-
-
-def _fix_rounds(rounds: List[Round]) -> List[Round]:
-    start_index = _game_start_index(rounds)
-    start_number = rounds[start_index].num - 1
-    result = rounds[start_index:]
-    for it in result:
-        it.num -= start_number
-    return list(it for it in result if it.winner_team is not None)
+    def print_statistics(self):
+        print(f"Match: {self.match_id} MAP: {self.map_name}")
+        print(f" {self.team_a[3]} VS {self.team_b[3]}")
+        print("First half: {w:3d} : {l:d}".format(w=self.team_a[1], l=self.team_b[1]))
+        print("Second half: {w:2d} : {l:d}".format(w=self.team_a[2], l=self.team_b[2]))
+        print("Final score: {w:1d} : {l:d}".format(w=self.team_a[0], l=self.team_b[0]))
+        print("-" * 90)
+        print("%12s %10s %9s %3s %3s %7s %6s %6s %5s %7s %7s" %
+              ("Player", "Team", "K", "D", "A", "ACC%", "HS%", "ADR", "UD", "KAST%", "Rat2.0"))
+        print("-" * 90)
+        for player in self.statistics:
+            print("%12s %16s %3d %3d %3d %7.2f %7.2f %6.2f %5d %6.2f %6.2f" %
+                  (player.name, player.team, player.kills, player.deaths, player.assists, player.acc,
+                   player.hs, player.adr, player.ud, player.kast, player.rat2_0))
 
 
 def is_grenade(weapon: str):

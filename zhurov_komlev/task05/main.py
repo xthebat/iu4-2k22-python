@@ -20,7 +20,8 @@ def main(args: list):
             data = json.loads(text)
 
         match = Match.from_data(data)
-        match.players_print()
+        # match.players_print()
+        match.print_statistics()
 
         print("\n--------- test5v5.json ---------")
 
@@ -29,9 +30,9 @@ def main(args: list):
             data = json.loads(text)
 
         match = Match.from_data(data)
-        match.players_print()
+        # match.players_print()
+        match.print_statistics()
 
 
 if __name__ == '__main__':
     main(sys.argv)
-
