@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import List, Iterable
 
 INVALID_STEAM_ID = 0
+FLOAT_AVERAGING = 2
 
 
 @dataclass
@@ -29,6 +30,9 @@ class Kill:
     victim_side: str
     assister_name: str
     suicide: bool
+    headshot: bool
+    is_trade: bool
+    player_traded_name: str
 
     @classmethod
     def from_data(cls, data: dict) -> "Kill":
@@ -40,7 +44,10 @@ class Kill:
             victim_name=data["victimName"],
             victim_side=data["victimSide"],
             assister_name=data["assisterName"],
-            suicide=data["isSuicide"]
+            suicide=data["isSuicide"],
+            headshot=data["isHeadshot"],
+            is_trade=data["isTrade"],
+            player_traded_name=data["playerTradedName"],
         )
 
 
@@ -100,31 +107,31 @@ class Player:
     deaths: int
     assists: int
     acc: float
-    # hs: float
-    # adr: float
-    # ud: int
-    # kast: float
+    hs: float
+    adr: float
+    ud: int
+    kast: float
     # rat2_0: float
     team: str
 
     @classmethod
     def from_data(cls, name: str, rounds: List[Round]) -> "Player":
+        kda = get_player_kda(rounds, name)
         team = get_player_team(rounds, name)
         acc = get_player_acc(rounds, name)
-        # hs = get_player_hs(rounds, name)
-        # adr = get_player_adr(rounds, name)
-        # ud = get_player_ud(rounds, name)
-        # kast = get_player_kast(rounds, name)
+        hs = get_player_hs(rounds, name, kda[0])
+        adr = get_player_adr(rounds, name)
+        ud = get_player_ud(rounds, name)
+        kast = get_player_kast(rounds, name)
         # rat2_0 = get_player_rat2_0(rounds, name)
-        kda = get_player_kda(rounds, name)
         return Player(
             name=name,
             team=team,
             acc=acc,
-            # hs=hs,
-            # adr=adr,
-            # ud=ud,
-            # kast=kast,
+            hs=hs,
+            adr=adr,
+            ud=ud,
+            kast=kast,
             # rat2_0=rat2_0,
             kills=kda[0],
             deaths=kda[1],
@@ -217,12 +224,12 @@ def get_player_acc(rounds: List[Round], name: str):
             if shoot.player_name == name and shoot.weapon.find('grenade') == -1:
                 shoots += 1
     if shoots:
-        return round(shoots/hits, 2)
+        return round(shoots/hits, FLOAT_AVERAGING)
     else:
         return 0
 
 
-def get_player_kda(rounds: List[Round], name: str):
+def get_player_kda(rounds: List[Round], name: str) -> list:
     kda = [0, 0, 0]
     for num_round in rounds:
         kills = num_round.kills
@@ -237,3 +244,88 @@ def get_player_kda(rounds: List[Round], name: str):
             if kill.assister_name == name:
                 kda[2] += 1
     return kda
+
+
+def get_player_hs(rounds: List[Round], name: str, death: int) -> float:
+    if death == 0:
+        return 0
+
+    hs_count = 0
+    for num_round in rounds:
+        kills = num_round.kills
+        for kill in kills:
+            if kill.attacker_name == name and kill.headshot:
+                hs_count += 1
+    return round(hs_count/death, FLOAT_AVERAGING)
+
+
+def get_player_adr(rounds: List[Round], name: str) -> float:
+    damage_count = 0
+    rounds_count = len(rounds)
+    for num_round in rounds:
+        damages = num_round.damages
+        for damage in damages:
+            if damage.attacker_name == name:
+                damage_count += damage.hp_damage_taken
+    return round(damage_count/rounds_count, FLOAT_AVERAGING)
+
+
+def get_player_ud(rounds: List[Round], name: str) -> int:
+    damage_count = 0
+    for num_round in rounds:
+        damages = num_round.damages
+        for damage in damages:
+            if damage.attacker_name == name and damage.weapon == "HE Grenade":
+                damage_count += damage.hp_damage_taken
+    return damage_count
+
+
+# процент от раундов, когда игрок сделал убийство, ассист или выжил,
+# а также случаи когда его разменяли сразу после смерти
+def get_player_kast(rounds: List[Round], name: str) -> float:
+    kast_count = 0
+    rounds_count = len(rounds)
+    for num_round in rounds:
+        useful = False    # kill or assist
+        survive = True
+        trade_after_death = False
+
+        kills = num_round.kills
+        for kill in kills:
+            if kill.attacker_name == name or kill.assister_name == name:
+                useful = True
+            elif kill.victim_name == name:
+                survive = False
+            elif kill.player_traded_name == name:
+                trade_after_death = True
+
+        if useful or survive or (trade_after_death and not survive):
+            kast_count += 1
+
+    return round(kast_count/rounds_count, FLOAT_AVERAGING)
+
+
+# Статья с формулой рейтинга 2.0
+# https://escorenews.com/ru/csgo/news/14681-fanat-cs-go-nashel-formulu-reytinga-2-0-ot-hltv-teper-vy-mojete-poschitat-svoy-sobstvennyj
+# RAT2_0 = 0.0073 * KAST + 0.3591 * KPR - 0.5329 * DPR + 0.2372 * Impact + 0.0032 * ADR + 0.1587
+# Impact = 2.13 * KPR + 0.32 * (Assists per round) -0.41
+# def get_player_rat2_0(rounds: List[Round], name: str):
+#       0.0073 * KAST \
+#     + 0.3591 * KPR \
+#     - 0.5329 * DPR \
+#     + 0.2372 * Impact \
+#     + 0.0032 * ADR \
+#     + 0.1587
+#
+#     name = name,
+#     team = team,
+#     acc = acc,
+#     # hs=hs,
+#     # adr=adr,
+#     # ud=ud,
+#     # kast=kast,
+#     rat2_0 = rat2_0,
+#     kills = kda[0],
+#     deaths = kda[1],
+#     assists = kda[2]
+
