@@ -1,9 +1,12 @@
 import json
 import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable, List
 
 from thebat.sem06.demo import Round, Match, MatchEncapsulated
-from thebat.sem06.parsers import FileInterface, CommonFile
+from thebat.sem06.interface_example import FileInterface, CommonFile
+from thebat.sem06.parsers import ParserRegistry, JsonDemoParser, DemDemoParser, GzDemoParser, Frames
 
 INVALID_STEAM_ID = 0
 
@@ -39,7 +42,7 @@ def read_data(file: FileInterface, address, size: int):
     return data
 
 
-def main():
+def sem07():
     with open("temp/1-266bdc4c-3672-4cd5-bc97-b79c6c1e4d6a-1-1.json", "rt") as file:
         text = file.read()
         data = json.loads(text)
@@ -86,5 +89,35 @@ def main():
     match_enc1.reset("111")
 
 
+STATE = 0
+
+
+def func_with_state(x):
+    global STATE
+    STATE += x
+    return STATE
+
+
+def clear_func(x, y):
+    return x + y
+
+
+def sem08():
+    registry = ParserRegistry()\
+        .register(".json", JsonDemoParser)\
+        .register(".dem", DemDemoParser)\
+        .register(".gz", GzDemoParser)
+
+    demo = registry.parse("temp/003539831729474764830_0420161581.dem", parse_rate=1)
+    frames = Frames.from_demo(demo).dump("temp/003539831729474764830_0420161581.zip")
+
+    # print(frames)
+
+    # for file in Path("temp").iterdir():
+    #     demo = registry.parse_or_none(str(file))
+    #     if demo is not None:
+    #         print(f"{file} parse ok")
+
+
 if __name__ == '__main__':
-    main()
+    sem08()
