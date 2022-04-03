@@ -32,16 +32,18 @@ class Match:
         self.map_name = data["mapName"]
 
         for data_round in data["gameRounds"]:
-            cs_round = Round(self)
+            cs_round = Round()
             cs_round.parse(data_round)
 
             if cs_round.is_normal():
                 self.rounds.append(cs_round)
 
+    def set_players(self):
         self.__parse_players_by_kills()
         self.__parse_players_by_damages()
         self.__parse_players_by_fires()
         self.__set_players_survive()
+        self.__set_players_kast()
 
     def print_info(self):
         half_round = self.rounds[len(self.rounds) // 2]
@@ -58,8 +60,14 @@ class Match:
             headshots_rate = player.headshots / player.kills if player.kills != 0 else 0
             accuracy_rate = (player.shots_done - player.shots_missed) / player.shots_done if player.shots_done != 0 else 0
             damage_rate = player.total_damage / len(self.rounds)
+            kast_rate = player.kast_rounds / len(self.rounds)
+            # rating 2.0
+            kpr = player.kills / len(self.rounds)
+            dpr = player.deaths / len(self.rounds)
+            impact = 2.13 * kpr + 0.42 * player.assists / len(self.rounds) - 0.41
+            rating = 0.0073 * kast_rate + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * damage_rate + 0.1587
             print(f"{count} {player.name} {player.kills} {player.deaths} {player.assists} ",
-                  f"{headshots_rate} {accuracy_rate} {damage_rate} {player.utility_damage}")
+                  f"{headshots_rate} {accuracy_rate} {damage_rate} {player.utility_damage} {kast_rate} {rating}")
             count += 1
 
     def __parse_players_by_kills(self):
@@ -107,9 +115,14 @@ class Match:
         for player in self.players:
             player.survives = count_of_rounds - player.deaths
 
+    def __set_players_kast(self):
+        for player in self.players:
+            for cs_round in self.rounds:
+                if cs_round.is_player_kast(player):
+                    player.kast_rounds += 1
+
 
 class Round:
-    match: Match
     score: 'Score'
     kills: list  # List[Kill] not work..
     damages: list
@@ -117,8 +130,7 @@ class Round:
     win_team: str
     lose_team: str
 
-    def __init__(self, match: Match):
-        self.match = match
+    def __init__(self):
         self.kills = list()
         self.damages = list()
         self.fires = list()
@@ -138,6 +150,23 @@ class Round:
         for data_fire in data_round["weaponFires"]:
             fire = Fire(data_fire)
             self.fires.append(fire)
+
+    def is_player_kast(self, player: 'Player') -> bool:
+        is_kill = False
+        is_assist = False
+        is_survive = True
+        is_trade = False
+        for kill in self.kills:
+            if kill.is_assister(player):
+                is_assist = True
+            if kill.is_trader(player):
+                is_trade = True
+            if kill.is_victim(player):
+                is_survive = False
+            if kill.is_killer(player):
+                is_kill = True
+
+        return is_kill or is_assist or is_survive or is_trade
 
     def is_normal(self):
         return self.score._end_t_score > self.score._t_score or \
@@ -168,6 +197,17 @@ class Kill:
         self.weapon = data_kill["weapon"]
         self.is_trade = data_kill["isTrade"]
 
+    def is_assister(self, player: 'Player') -> bool:
+        return self.assister_name == player.name
+
+    def is_trader(self, player: 'Player') -> bool:
+        return self.is_trade and self.trader_name == player.name
+
+    def is_victim(self, player: 'Player') -> bool:
+        return self.victim_name == player.name
+
+    def is_killer(self, player: 'Player') -> bool:
+        return self.assister_name == player.name
 
 class Damage:
     attacker_name: str
@@ -224,6 +264,7 @@ class Player:
     headshots: int = 0
     total_damage: int = 0
     utility_damage: int = 0
+    kast_rounds: int = 0
 
     def __eq__(self, other):
         return self.name == other.name and self.team == other.team
@@ -237,6 +278,7 @@ def main(args):
 
     match = Match()
     match.parse(file_name)
+    match.set_players()
     match.print_info()
 
 
