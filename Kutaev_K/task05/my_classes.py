@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Type
 from task05.config import *
 from task05.exceptions import *
 
@@ -8,18 +8,27 @@ from task05.exceptions import *
 class WeaponFire:
     player_steam_id: int
     weapon: str
+    player_team_name: str
+    player_name: str
 
     @classmethod
-    def data_to_weapon_fires(cls, weapon_fire_data: list) -> List["WeaponFire"]:
-        weapon_fire_list: List["WeaponFire"] = list()
-        for weapon_fire in weapon_fire_data:
-            weapon_fire_list.append(
-                WeaponFire(
+    def data_to_weapon_fire(cls, weapon_fire: dict) -> "WeaponFire":
+        return WeaponFire(
                     player_steam_id=weapon_fire["playerSteamID"],
-                    weapon=weapon_fire["weapon"]
+                    weapon=weapon_fire["weapon"],
+                    player_team_name=weapon_fire["playerTeam"],
+                    player_name=weapon_fire["playerName"]
                 )
-            )
-        return weapon_fire_list
+
+    @staticmethod
+    def get_weapon_fire_stats(stats: "PlayerStats",
+                              weapon_fires: List["WeaponFire"],
+                              player: "Player"
+                              ) -> "PlayerStats":
+        for weapon_fire in weapon_fires:
+            if weapon_fire.player_steam_id == player.steam_id and not GRENADES.count(weapon_fire.weapon):
+                stats.weapon_fires_count += 1
+        return stats
 
 
 @dataclass
@@ -30,18 +39,24 @@ class Damage:
     weapon: str
 
     @classmethod
-    def data_to_damages(cls, damage_data: list) -> List["Damage"]:
-        damage_list: List["Damage"] = list()
-        for damage in damage_data:
-            damage_list.append(
-                Damage(
+    def data_to_damage(cls, damage: dict) -> "Damage":
+        return Damage(
                     attacker_steam_id=damage["attackerSteamID"],
                     hp_damage_taken=damage["hpDamageTaken"],
                     armor_damage_taken=damage["armorDamageTaken"],
                     weapon=damage["weapon"]
                 )
-            )
-        return damage_list
+
+    @staticmethod
+    def get_damage_stats(stats: "PlayerStats", damages: List["Damage"], player: "Player") -> "PlayerStats":
+        for damage in damages:
+            if damage.attacker_steam_id == player.steam_id:
+                if GRENADES.count(damage.weapon):
+                    stats.utility_damage += damage.hp_damage_taken + damage.armor_damage_taken
+                else:
+                    stats.weapon_damages_count += 1
+                    stats.weapon_damages += damage.hp_damage_taken + damage.armor_damage_taken
+        return stats
 
 
 @dataclass
@@ -50,16 +65,11 @@ class Grenade:
     grenade_type: str
 
     @classmethod
-    def data_to_grenades(cls, grenades_data: list) -> List["Grenade"]:
-        grenades_list: List["Grenade"] = list()
-        for grenade in grenades_data:
-            grenades_list.append(
-                Grenade(
+    def data_to_grenade(cls, grenade: dict) -> "Grenade":
+        return Grenade(
                     thrower_steam_id=grenade["throwerSteamID"],
                     grenade_type=grenade["grenadeType"]
                 )
-            )
-        return grenades_list
 
 
 @dataclass
@@ -74,11 +84,8 @@ class Kill:
     traded_steam_id: int
 
     @classmethod
-    def data_to_kills(cls, kills_data: list) -> List["Kill"]:
-        kills_list: List["Kill"] = list()
-        for kill in kills_data:
-            kills_list.append(
-                Kill(
+    def data_to_kill(cls, kill: dict) -> "Kill":
+        return Kill(
                     attacker_steam_id=kill["attackerSteamID"],
                     victim_steam_id=kill["victimSteamID"],
                     assister_steam_id=kill["assisterSteamID"],
@@ -88,92 +95,100 @@ class Kill:
                     is_trade=int(kill["isTrade"]),
                     traded_steam_id=kill["playerTradedSteamID"]
                 )
-            )
-        return kills_list
+
+    @staticmethod
+    def get_player_stats(stats: "PlayerStats", kills: List["Kill"], player: "Player") -> "PlayerStats":
+        for kill in kills:
+            if kill.attacker_steam_id == player.steam_id:
+                stats.kills_count += 1
+                stats.is_kast = 1
+                if kill.is_headshot == HEADSHOT:
+                    stats.headshot_count += 1
+            if kill.victim_steam_id == player.steam_id:
+                stats.deaths_count += 1
+                stats.is_dead_round = 1
+            if kill.assister_steam_id == player.steam_id:
+                stats.assist_count += 1
+                stats.is_kast = 1
+            if kill.traded_steam_id == player.steam_id:
+                stats.is_kast = 1
+            if kill == kills[LAST] and stats.is_dead_round == 0:
+                stats.is_kast = 1
+        return stats
 
 
 @dataclass
 class Round:
     number: int
     winner: str
-    kills_list: List[Kill]
-    grenades_list: List[Grenade]
-    damage_list: List[Damage]
-    weapon_fires_list: List[WeaponFire]
+    is_warmup: bool
+    ct_team: str
+    t_team: str
+    kills: List[Kill]
+    grenades: List[Grenade]
+    damage: List[Damage]
+    weapon_fires: List[WeaponFire]
+
+    def get_round_type(self) -> int:
+        if self.is_warmup is True:
+            return False
+        if self.winner is None:
+            return False
+        if self.number == CONNECTION_ROUND:
+            return False
+        return True
 
     @classmethod
-    def is_good_round(cls, round_data: dict) -> int:
-        if round_data["isWarmup"] is True:
-            return INCORRECT_ROUND
-        if round_data["winningSide"] == EMPTY:
-            return INCORRECT_ROUND
-        if round_data["roundNum"] == CONNECTION_ROUND:
-            return INCORRECT_ROUND
-        return GOOD_ROUND
+    def data_to_round(cls, my_round: dict) -> "Round":
+        kills_loc: List[Kill] = list()
+        for kill in my_round["kills"]:
+            kills_loc.append(Kill.data_to_kill(kill))
 
-    @classmethod
-    def data_to_rounds(cls, good_rounds: list, start_round: int, end_round: int) -> List["Round"]:
-        rounds_list: List["Round"] = list()
-        for idx, my_round in enumerate(good_rounds):
-            if start_round <= idx <= end_round:
-                rounds_list.append(
-                    Round(
-                        number=idx,
-                        winner=my_round["winningTeam"],
-                        kills_list=Kill.data_to_kills(my_round["kills"]),
-                        grenades_list=Grenade.data_to_grenades(my_round["grenades"]),
-                        damage_list=Damage.data_to_damages(my_round["damages"]),
-                        weapon_fires_list=WeaponFire.data_to_weapon_fires(my_round["weaponFires"])
-                    )
+        grenades_loc: List["Grenade"] = list()
+        for grenade in my_round["grenades"]:
+            grenades_loc.append(Grenade.data_to_grenade(grenade))
+
+        damages_loc: List["Damage"] = list()
+        for damage in my_round["damages"]:
+            damages_loc.append(Damage.data_to_damage(damage))
+
+        weapon_fires_loc: List["WeaponFire"] = list()
+        for weapon_fire in my_round["weaponFires"]:
+            weapon_fires_loc.append(WeaponFire.data_to_weapon_fire(weapon_fire))
+        return Round(
+                    number=my_round["roundNum"],
+                    winner=my_round["winningTeam"],
+                    ct_team=my_round["ctTeam"],
+                    t_team=my_round["tTeam"],
+                    is_warmup=my_round["isWarmup"],
+                    kills=kills_loc,
+                    grenades=grenades_loc,
+                    damage=damages_loc,
+                    weapon_fires=weapon_fires_loc
                 )
-        return rounds_list
 
 
 @dataclass
 class Half:
     number: int
-    ct_team: str
-    t_team: str
-    rounds_list: List[Round]
+    rounds: List[Round]
 
     @classmethod
-    def data_to_halves(cls, good_rounds: list) -> List["Half"]:
-        ct_team_loc = good_rounds[FIRST_ROUND]["ctTeam"]
-        t_team_loc = good_rounds[FIRST_ROUND]["tTeam"]
-        halves_list: List[Half] = list()
-        for my_round in good_rounds:
-            if my_round["ctTeam"] != ct_team_loc:
-                halves_list.append(
-                    Half(
-                        number=FIRST_HALF,
-                        ct_team=ct_team_loc,
-                        t_team=t_team_loc,
-                        rounds_list=Round.data_to_rounds(
-                                        good_rounds,
-                                        start_round=FIRST_ROUND,
-                                        end_round=good_rounds.index(my_round) - 1
-                                    )
-                    )
-                )
-                halves_list.append(
-                    Half(
-                        number=SECOND_HALF,
-                        ct_team=t_team_loc,
-                        t_team=ct_team_loc,
-                        rounds_list=Round.data_to_rounds(
-                                        good_rounds,
-                                        start_round=good_rounds.index(my_round),
-                                        end_round=len(good_rounds)
-                                    )
-                    )
-                )
-                return halves_list
-        raise TeamError(ct_team_loc)
+    def data_to_half(cls, good_rounds: List["Round"], half_number: int, border_round: int) -> "Half":
+        if half_number == FIRST_HALF:
+            return Half(
+                number=FIRST_HALF,
+                rounds=good_rounds[:border_round]
+            )
+        else:
+            return Half(
+                number=SECOND_HALF,
+                rounds=good_rounds[border_round:]
+            )
 
-    @classmethod
-    def calc_half_stat(cls, team_name: str, half: "Half") -> int:
-        counter: int = len([my_round for my_round in half.rounds_list if my_round.winner == team_name])
-        return counter
+    @staticmethod
+    def calc_half_stat(team_name: str, half: "Half") -> int:
+        return len([my_round for my_round in half.rounds if my_round.winner == team_name])
 
 
 @dataclass
@@ -183,82 +198,51 @@ class Player:
     team_name: str
 
     @classmethod
-    def data_to_players(cls, data_rounds: list, players_steam_ids: list) -> List["Player"]:
-        players_list: List[Player] = list()
-
-        for my_round in data_rounds:
-            for weapon_fire in my_round["weaponFires"]:
-                if players_steam_ids.count(weapon_fire["playerSteamID"]):
-                    players_list.append(
-                        Player(
-                            steam_id=weapon_fire["playerSteamID"],
-                            name=weapon_fire["playerName"],
-                            team_name=weapon_fire["playerTeam"]
-                        )
-                    )
-                    players_steam_ids.remove(weapon_fire["playerSteamID"])
-                    if not players_steam_ids:
-                        return players_list
-        raise PlayersSteamIDError(players_steam_ids)
-
-    @classmethod
-    def parse_players_data(
-        cls, good_rounds: list,
-        first_team_name: str,
-        second_team_name: str,
-        match_type: int
-    ) -> dict:
-
-        if match_type == MATCH_5_X_5:
-            players_count = PLAYERS_COUNT_5_X_5
-        else:
-            players_count = PLAYERS_COUNT_2_X_2
-
-        players_steam_ids: set = set()
-        for my_round in good_rounds:
-            # maybe optimize it
-            players_steam_ids = set(it["playerSteamID"] for it in my_round["weaponFires"])
-
-            if len(players_steam_ids) == players_count:
-                break
-
-        players_list: List[Player] = Player.data_to_players(good_rounds, list(players_steam_ids))
-
-        return_players_dict: dict = {first_team_name: [], second_team_name: []}
-        for player in players_list:
-            if player.team_name == first_team_name:
-                return_players_dict[first_team_name].append(player)
-            else:
-                return_players_dict[second_team_name].append(player)
-        return return_players_dict
+    def data_to_player(cls, weapon_fire: WeaponFire) -> "Player":
+        return Player(
+                    steam_id=weapon_fire.player_steam_id,
+                    name=weapon_fire.player_name,
+                    team_name=weapon_fire.player_team_name
+                )
 
 
 @dataclass
 class Team:
     name: str
-    players_list: List[Player]
+    players: List[Player]
 
     @classmethod
-    def data_to_teams(cls, good_rounds: list, match_type: int) -> List["Team"]:
-        teams_list: List["Team"] = list()
-        first_team_name: str = good_rounds[FIRST_ROUND]["ctTeam"]
-        second_team_name: str = good_rounds[FIRST_ROUND]["tTeam"]
-        player_dict: dict = Player.parse_players_data(good_rounds, first_team_name, second_team_name, match_type)
-        if len(player_dict) < MIN_PLAYERS_COUNT:
-            raise PlayersError
-        teams_list.append(
-            Team(
-                name=first_team_name,
-                players_list=player_dict[first_team_name]
-            )
-        )
-        teams_list.append(
-            Team(
-                name=second_team_name,
-                players_list=player_dict[second_team_name]
-            )
-        )
-        return teams_list
+    def data_to_team(cls, good_rounds: List[Round], match_type: int, team_name: str) -> "Team":
+        if match_type == MATCH_5_X_5:
+            team_players_count = TEAM_PLAYERS_COUNT_5_X_5
+        else:
+            team_players_count = TEAM_PLAYERS_COUNT_2_X_2
+
+        players_steam_ids: set = set()
+        for my_round in good_rounds:
+            # maybe optimize it
+            players_steam_ids = set(it.player_steam_id for it
+                                    in my_round.weapon_fires
+                                    if it.player_team_name == team_name)
+            if len(players_steam_ids) == team_players_count:
+                break
+        players_steam_ids_list: list = list(players_steam_ids)
+        players_loc: List[Player] = list()
+        for my_round in good_rounds:
+            for weapon_fire in my_round.weapon_fires:
+                if players_steam_ids_list.count(weapon_fire.player_steam_id) and \
+                        weapon_fire.player_team_name == team_name:
+                    players_loc.append(Player.data_to_player(weapon_fire))
+
+                    players_steam_ids_list.remove(weapon_fire.player_steam_id)
+                    if not players_steam_ids_list:
+                        if len(players_loc) < MIN_PLAYERS_COUNT:
+                            raise PlayersError
+                        return Team(
+                            name=team_name,
+                            players=players_loc
+                        )
+        raise PlayersSteamIDError(players_steam_ids_list)
 
 
 @dataclass
@@ -266,12 +250,12 @@ class Match:
     id: int
     map: str
     type: int
-    teams_list: List[Team]
-    halves_list: List[Half]
+    team_a: Team
+    team_b: Team
+    halves: List[Half]
 
     @classmethod
     def data_to_match(cls, data: dict) -> "Match":
-
         match_type_loc: int
         if data["serverVars"]["maxRounds"] == ROUND_COUNT_5_X_5:
             match_type_loc = MATCH_5_X_5
@@ -279,157 +263,140 @@ class Match:
             match_type_loc = MATCH_2_X_2
         else:
             raise MatchTypeError(data["serverVars"]["maxRounds"])
-        good_rounds: list = [it for it in data["gameRounds"] if Round.is_good_round(round_data=it) == GOOD_ROUND]
+
+        rounds = map(lambda it: Round.data_to_round(it), data["gameRounds"])
+        rounds = filter(lambda it: it.get_round_type(), rounds)
+        good_rounds: List[Round] = list(rounds)
+        for index, my_round in enumerate(good_rounds):
+            my_round.number = index + 1
+
         if len(good_rounds) < MIN_GOOD_ROUNDS:
             raise GoodRoundsError
-        team_list_loc: List[Team] = Team.data_to_teams(good_rounds, match_type_loc)
+        team_a_name: str = good_rounds[FIRST_ROUND].ct_team
+        team_b_name: str = good_rounds[FIRST_ROUND].t_team
+        team_a_loc: Team = Team.data_to_team(good_rounds, match_type_loc, team_a_name)
+        team_b_loc: Team = Team.data_to_team(good_rounds, match_type_loc, team_b_name)
 
-        halves_list_loc: List[Half] = Half.data_to_halves(good_rounds)
+        halves_loc: List[Half] = list()
+        for my_round in good_rounds:
+            if my_round.ct_team != team_a_name:
+                halves_loc.append(Half.data_to_half(good_rounds, FIRST_HALF, my_round.number))
+                halves_loc.append(Half.data_to_half(good_rounds, SECOND_HALF, my_round.number-1))
 
-        return Match(
+                return Match(
                     id=data["matchID"],
                     map=data["mapName"],
                     type=match_type_loc,
-                    teams_list=team_list_loc,
-                    halves_list=halves_list_loc
-        )
+                    team_a=team_a_loc,
+                    team_b=team_b_loc,
+                    halves=halves_loc
+                )
+        raise TeamError(team_a_name)
 
 
 @dataclass
 class PlayerStats(Player):
-    kills_count: int
-    deaths_count: int
-    assist_count: int
-    accuracy: float
-    hs_percent: float
-    average_round_damage: float
-    utility_damage: int
-    kast: float
+    kills_count: int = 0
+
+    deaths_count: int = 0
+    is_dead_round: int = 0
+
+    assist_count: int = 0
+
+    weapon_damages_count: int = 0
+    weapon_damages: int = 0
+    weapon_fires_count: int = 0
+    accuracy: float = 0
+
+    headshot_count: int = 0
+    hs_percent: float = 0
+
+    average_round_damage: float = 0
+
+    utility_damage: int = 0
+
+    kast_count: int = 0
+    kast: float = 0
+    is_kast: int = 0
+
     rating_2_0: int = 0
 
     @classmethod
-    def calc_player_stats(cls, halves_list: List["Half"], player: Player) -> "PlayerStats":
-        kills_count_loc: int = 0
-
-        deaths_count_loc: int = 0
-        is_dead_round: int = 0
-
-        assist_count_loc: int = 0
-
-        headshot_count: int = 0
-
-        weapon_damages_count: int = 0
-        weapon_damages: int = 0
-        weapon_fires_count: int = 0
-
-        grenade_damage: int = 0
-
-        is_kast: int = 0
-        kast_count: int = 0
-        rounds_count: int = 0
-
-        for half in halves_list:
-            for my_round in half.rounds_list:
-                for kill in my_round.kills_list:
-                    if kill.attacker_steam_id == player.steam_id:
-                        kills_count_loc += 1
-                        is_kast = 1
-                        if kill.is_headshot == HEADSHOT:
-                            headshot_count += 1
-                    if kill.victim_steam_id == player.steam_id:
-                        deaths_count_loc += 1
-                        is_dead_round = 1
-                    if kill.assister_steam_id == player.steam_id:
-                        assist_count_loc += 1
-                        is_kast = 1
-                    if kill.traded_steam_id == player.steam_id:
-                        is_kast = 1
-                    if kill == my_round.kills_list[LAST] and is_dead_round == 0:
-                        is_kast = 1
-                for damage in my_round.damage_list:
-                    if damage.attacker_steam_id == player.steam_id:
-                        if GRENADES.count(damage.weapon):
-                            grenade_damage += damage.hp_damage_taken + damage.armor_damage_taken
-                        else:
-                            weapon_damages_count += 1
-                            weapon_damages += damage.hp_damage_taken + damage.armor_damage_taken
-                for weapon_fire in my_round.weapon_fires_list:
-                    if weapon_fire.player_steam_id == player.steam_id and not GRENADES.count(weapon_fire.weapon):
-                        weapon_fires_count += 1
-                if is_kast == 1:
-                    kast_count += 1
-                is_kast = 0
-                is_dead_round = 0
-                rounds_count += 1
-
-        if weapon_fires_count == 0:
-            weapon_fires_count = 1
-            weapon_damages_count = 0
-        if kills_count_loc == 0:
-            hs_percent_loc: float = 0
-        else:
-            hs_percent_loc: float = round(headshot_count/kills_count_loc, 3)
-        if rounds_count == 0:
-            rounds_count = 1
-            weapon_damages = 0
-            grenade_damage = 0
-            kast_count = 0
-
-        return PlayerStats(
+    def calc_player_stats(cls, halves: List["Half"], player: Player) -> "PlayerStats":
+        stats: PlayerStats = PlayerStats(
             steam_id=player.steam_id,
             name=player.name,
             team_name=player.team_name,
-            kills_count=kills_count_loc,
-            deaths_count=deaths_count_loc,
-            assist_count=assist_count_loc,
-            accuracy=round(weapon_damages_count/weapon_fires_count * IN_PERCENT, 2),
-            hs_percent=round(hs_percent_loc * IN_PERCENT, 2),
-            average_round_damage=round((weapon_damages + grenade_damage)/rounds_count * IN_PERCENT, 2),
-            utility_damage=grenade_damage,
-            kast=round(kast_count/rounds_count * IN_PERCENT, 2)
         )
 
-    @classmethod
-    def calc_players_stats(cls, halves_list: List["Half"], team: Team) -> List["PlayerStats"]:
-        player_stats_list: List[PlayerStats] = list()
+        rounds_count: int = 0
 
-        for player in team.players_list:
-            player_stats_list.append(PlayerStats.calc_player_stats(halves_list, player))
-        return player_stats_list
+        for half in halves:
+            for my_round in half.rounds:
+                stats = Kill.get_player_stats(stats, my_round.kills, player)
+                stats = Damage.get_damage_stats(stats, my_round.damage, player)
+                stats = WeaponFire.get_weapon_fire_stats(stats, my_round.weapon_fires, player)
+                if stats.is_kast == 1:
+                    stats.kast_count += 1
+                stats.is_kast = 0
+                stats.is_dead_round = 0
+                rounds_count += 1
+
+        if stats.weapon_fires_count == 0:
+            stats.weapon_fires_count = 1
+            stats.weapon_damages_count = 0
+        if stats.kills_count == 0:
+            stats.hs_percent = 0
+        else:
+            stats.hs_percent = round(stats.headshot_count/stats.kills_count * IN_PERCENT, 2)
+        if rounds_count == 0:
+            rounds_count = 1
+            stats.weapon_damages = 0
+            stats.utility_damage = 0
+            stats.kast_count = 0
+
+        stats.accuracy = round(stats.weapon_damages_count / stats.weapon_fires_count * IN_PERCENT, 2)
+        stats.average_round_damage = round((stats.weapon_damages + stats.utility_damage) / rounds_count, 2)
+        stats.kast = round(stats.kast_count / rounds_count * IN_PERCENT, 2)
+        return stats
 
 
 @dataclass
 class TeamStats:
     name: str
-    player_stats_list: List[PlayerStats]
+    player_stats: List[PlayerStats]
     first_half_score: int
     second_half_score: int
     final_score: int
 
     @classmethod
-    def calc_team_stats(cls, match: Match) -> List["TeamStats"]:
-        team_stats_list: List[TeamStats] = list()
-        for team in match.teams_list:
-            first_half_score_loc: int = Half.calc_half_stat(team.name, match.halves_list[FIRST_HALF_IN_LIST])
-            second_half_score_loc: int = Half.calc_half_stat(team.name, match.halves_list[SECOND_HALF_IN_LIST])
-            team_stats_list.append(
-                TeamStats(
+    def calc_team_stats(cls, match: Match, team: Team) -> "TeamStats":
+        first_half_score_loc: int = Half.calc_half_stat(team.name, match.halves[FIRST_HALF_IN_LIST])
+        second_half_score_loc: int = Half.calc_half_stat(team.name, match.halves[SECOND_HALF_IN_LIST])
+        player_stats_loc: List[PlayerStats] = list()
+        for player in team.players:
+            player_stats_loc.append(PlayerStats.calc_player_stats(match.halves, player))
+        return TeamStats(
                     name=team.name,
                     first_half_score=first_half_score_loc,
                     second_half_score=second_half_score_loc,
                     final_score=first_half_score_loc + second_half_score_loc,
-                    player_stats_list=PlayerStats.calc_players_stats(match.halves_list, team)
+                    player_stats=player_stats_loc
                 )
-            )
-        return team_stats_list
 
 
 @dataclass
 class Statistics:
-    teams_list: List[TeamStats]
+    team_a: TeamStats
+    team_b: TeamStats
 
     @classmethod
     def calculate_stats(cls, match: Match) -> "Statistics":
         return Statistics(
-            teams_list=TeamStats.calc_team_stats(match)
+            team_a=TeamStats.calc_team_stats(match, match.team_a),
+            team_b=TeamStats.calc_team_stats(match, match.team_b)
         )
+
+    def __iter__(self):
+        yield self.team_a
+        yield self.team_b

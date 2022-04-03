@@ -2,7 +2,6 @@ import json
 import sys
 from task05.exceptions import *
 from task05.my_classes import Match, Statistics
-from task05.config import *
 from prettytable import PrettyTable
 
 
@@ -28,15 +27,15 @@ def main(log_file: str):
     stats: Statistics = Statistics.calculate_stats(match)
 
     print(f"Match №'{match.id}' Map: {match.map}\n"
-          f"{stats.teams_list[TEAM_A].name} VS {stats.teams_list[TEAM_B].name}\n"
-          f"First Half:    {stats.teams_list[TEAM_A].first_half_score}:{stats.teams_list[TEAM_B].first_half_score}\n"
-          f"Second Half:   {stats.teams_list[TEAM_A].second_half_score}:{stats.teams_list[TEAM_B].second_half_score}\n"
-          f"Final score:   {stats.teams_list[TEAM_A].final_score}:{stats.teams_list[TEAM_B].final_score}")
+          f"{stats.team_a.name} VS {stats.team_b.name}\n"
+          f"First Half:    {stats.team_a.first_half_score}:{stats.team_b.first_half_score}\n"
+          f"Second Half:   {stats.team_a.second_half_score}:{stats.team_b.second_half_score}\n"
+          f"Final score:   {stats.team_a.final_score}:{stats.team_b.final_score}")
 
     index: int = 1
     table = PrettyTable(["№", "Player", "K", "D", "A", "ACC%", "HS%", "ADR", "UD", "KAST%"])
-    for team in stats.teams_list:
-        for player_stats in team.player_stats_list:
+    for team in stats:
+        for player_stats in team.player_stats:
             table.add_row([index,
                            player_stats.name,
                            player_stats.kills_count,
