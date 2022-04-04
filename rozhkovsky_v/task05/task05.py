@@ -1,5 +1,7 @@
 import sys
 import json
+import pandas
+from typing import List
 from dataclasses import dataclass
 
 
@@ -8,8 +10,8 @@ class Match:
     map_name: str
     team_a: str
     team_b: str
-    rounds: list
-    players: list
+    rounds: List['Round']
+    players: List['Player']
 
     def __init__(self):
         self.rounds = list()
@@ -48,27 +50,39 @@ class Match:
     def print_info(self):
         half_round = self.rounds[len(self.rounds) // 2]
         last_round = self.rounds[-1]
-        count = 0
+        header = "Player K D A HS% ACC% ADR UD KAST% Rating"
+        data_frame = pandas.DataFrame(columns=header.split(" "))
         print(f"Match {self.match_id} {self.map_name}")
         print(f"{self.rounds[0].win_team} vs {self.rounds[0].lose_team}")
         print(f"First Half:  {half_round.score._end_ct_score} : {half_round.score._end_t_score}")
         print(f"Second Half: {last_round.score._end_t_score - half_round.score._end_ct_score} :",
               f"{last_round.score._end_ct_score - half_round.score._end_t_score}")
         print(f"Final score: {last_round.score._end_t_score} : {last_round.score._end_ct_score}")
-        print("     Player")
         for player in self.players:
-            headshots_rate = player.headshots / player.kills if player.kills != 0 else 0
-            accuracy_rate = (player.shots_done - player.shots_missed) / player.shots_done if player.shots_done != 0 else 0
+            headshots_rate = format(100 * player.headshots / player.kills if player.kills != 0 else 0, '.2f')
+            accuracy_rate = format(100 * (player.shots_done - player.shots_missed) /
+                                   player.shots_done if player.shots_done != 0 else 0, '.2f')
             damage_rate = player.total_damage / len(self.rounds)
             kast_rate = player.kast_rounds / len(self.rounds)
             # rating 2.0
             kpr = player.kills / len(self.rounds)
             dpr = player.deaths / len(self.rounds)
             impact = 2.13 * kpr + 0.42 * player.assists / len(self.rounds) - 0.41
-            rating = 0.0073 * kast_rate + 0.3591 * kpr - 0.5329 * dpr + 0.2372 * impact + 0.0032 * damage_rate + 0.1587
-            print(f"{count} {player.name} {player.kills} {player.deaths} {player.assists} ",
-                  f"{headshots_rate} {accuracy_rate} {damage_rate} {player.utility_damage} {kast_rate} {rating}")
-            count += 1
+            rating = format(0.0073 * kast_rate + 0.3591 * kpr - 0.5329 * dpr +
+                            0.2372 * impact + 0.0032 * damage_rate + 0.1587, '.3f')
+            data_dict = dict()
+            data_dict["Player"] = player.name
+            data_dict["K"] = player.kills
+            data_dict["D"] = player.deaths
+            data_dict["A"] = player.assists
+            data_dict["HS%"] = headshots_rate
+            data_dict["ACC%"] = accuracy_rate
+            data_dict["ADR"] = format(damage_rate, '.2f')
+            data_dict["UD"] = player.utility_damage
+            data_dict["KAST%"] = format(kast_rate * 100, '.2f')
+            data_dict["Rating"] = rating
+            data_frame = data_frame.append(data_dict, ignore_index=True)
+        print(data_frame)
 
     def __parse_players_by_kills(self):
         for cs_round in self.rounds:
@@ -124,9 +138,9 @@ class Match:
 
 class Round:
     score: 'Score'
-    kills: list  # List[Kill] not work..
-    damages: list
-    fires: list
+    kills: List['Kill']
+    damages: List['Damage']
+    fires: List['Fire']
     win_team: str
     lose_team: str
 
@@ -168,7 +182,7 @@ class Round:
 
         return is_kill or is_assist or is_survive or is_trade
 
-    def is_normal(self):
+    def is_normal(self) -> bool:
         return self.score._end_t_score > self.score._t_score or \
                self.score._end_ct_score > self.score._ct_score
 
@@ -208,6 +222,7 @@ class Kill:
 
     def is_killer(self, player: 'Player') -> bool:
         return self.assister_name == player.name
+
 
 class Damage:
     attacker_name: str
