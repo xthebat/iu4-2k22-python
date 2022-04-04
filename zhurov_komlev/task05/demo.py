@@ -199,11 +199,9 @@ class Statistics:
             return 0
         hs_count = 0
         for game_round in rounds:
-            all_kills = game_round.kills
-            for kill in all_kills:
-                if kill.attacker_name == name and kill.headshot:
-                    hs_count += 1
-        percent_hs = hs_count / kills * 100
+            headshots = list(filter(lambda kill: kill.attacker_name == name and kill.headshot, game_round.kills))
+            hs_count += len(headshots)
+        percent_hs = hs_count / kills * PERCENT
         return percent_hs
 
     @staticmethod
@@ -244,11 +242,10 @@ class Statistics:
     def get_player_kast(rounds: List[Round], name: str) -> float:
         kast_count = 0
         for game_round in rounds:
-            kills = game_round.kills
             useful = False
             survive = True
             trade_after_death = False
-            for kill in kills:
+            for kill in game_round.kills:
                 if kill.attacker_name == name or kill.assister_name == name:
                     useful = True
                 elif kill.victim_name == name:
@@ -412,16 +409,17 @@ class MapStatistics:
         return stats
 
     def print_statistics(self):
-        print(f"Match: {self.match_id} MAP: {self.map_name}")
-        print(f"{self.team_a[3]} VS {self.team_b[3]}")
-        print("First half: {w:3d} : {l:d}".format(w=self.team_a[1], l=self.team_b[1]))
-        print("Second half: {w:2d} : {l:d}".format(w=self.team_a[2], l=self.team_b[2]))
-        print("Final score: {w:1d} : {l:d}".format(w=self.team_a[0], l=self.team_b[0]))
-        print("-" * 90)
-        print("%12s %10s %9s %3s %3s %7s %6s %6s %5s %7s %7s" %
+        filling = len(self.team_a[3]) - 4
+        print(f"Match: {self.match_id}      MAP: {self.map_name}")
+        print(f"Teams:       {self.team_a[3]} : {self.team_b[3]}")
+        print("First half:    {f}{w:2d} : {l:d}".format(f=" " * filling, w=self.team_a[1], l=self.team_b[1]))
+        print("Second half:   {f}{w:2d} : {l:d}".format(f=" " * filling, w=self.team_a[2], l=self.team_b[2]))
+        print("Final score:   {f}{w:2d} : {l:d}".format(f=" " * filling, w=self.team_a[0], l=self.team_b[0]))
+        print("-" * 100)
+        print("%12s  %10s  %9s  %3s  %3s  %7s  %6s  %6s  %5s  %7s  %7s" %
               ("Player", "Team", "K", "D", "A", "ACC%", "HS%", "ADR", "UD", "KAST%", "Rat2.0"))
-        print("-" * 90)
+        print("-" * 100)
         for player in self.stats:
-            print("%12s %16s %3d %3d %3d %7.2f %7.2f %6.2f %5d %6.2f %6.2f" %
+            print("%12s  %16s  %3d  %3d  %3d  %7.2f  %7.2f  %6.2f  %5d  %6.2f  %6.2f" %
                   (player.name, player.team, player.kills, player.deaths, player.assists, player.acc,
                    player.hs, player.adr, player.ud, player.kast, player.rat2_0))

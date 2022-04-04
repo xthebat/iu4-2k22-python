@@ -10,7 +10,7 @@ def main(args: list):
 
     else:
         print_match("test2v2.json", "Team")
-        print_match("test5v5.json", "K")
+        print_match("test5v5.json", "RAT")
 
 
 def print_match(match: str, sort: str):
