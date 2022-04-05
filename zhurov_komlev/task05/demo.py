@@ -14,7 +14,6 @@ SORT_DICT = {
     "KAST": lambda x: x.kast,
     "RAT": lambda x: x.rat2_0
 }
-SORT_LIST = "Player", "Team", "K", "D", "A", "ACC", "HS", "ADR", "KAST", "RAT", "UD"
 COUNTER_TERRORIST = "CT"
 TERRORIST = "T"
 PERCENT = 100
