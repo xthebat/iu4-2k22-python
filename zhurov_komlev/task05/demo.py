@@ -1,6 +1,19 @@
 from dataclasses import dataclass
 from typing import List
 
+SORT_DICT = {
+    "Player": lambda x: x.name,
+    "Team": lambda x: x.team,
+    "K": lambda x: x.kills,
+    "D": lambda x: x.deaths,
+    "A": lambda x: x.assists,
+    "ACC": lambda x: x.acc,
+    "HS": lambda x: x.hs,
+    "ADR": lambda x: x.adr,
+    "UD": lambda x: x.ud,
+    "KAST": lambda x: x.kast,
+    "RAT": lambda x: x.rat2_0
+}
 SORT_LIST = "Player", "Team", "K", "D", "A", "ACC", "HS", "ADR", "KAST", "RAT", "UD"
 COUNTER_TERRORIST = "CT"
 TERRORIST = "T"
@@ -379,8 +392,8 @@ class MapStatistics:
         rounds = match_info.rounds
         nicknames = match_info.nicknames
         stats = [Statistics.from_data(it, rounds) for it in nicknames]
-        if sort in SORT_LIST:
-            stats = cls.sort_stats(sort, stats)
+        if sort in SORT_DICT:
+            stats = reversed(sorted(stats, key=SORT_DICT[sort]))
         return MapStatistics(
             stats=stats,
             match_id=match_info.match_id,
@@ -389,24 +402,6 @@ class MapStatistics:
             max_rounds=match_info.max_rounds,
             map_name=match_info.map_name
         )
-
-    @staticmethod
-    def sort_stats(sort: str, stats: list):
-        sort_dict = {
-            "Player": lambda x: x.name,
-            "Team": lambda x: x.team,
-            "K": lambda x: x.kills,
-            "D": lambda x: x.deaths,
-            "A": lambda x: x.assists,
-            "ACC": lambda x: x.acc,
-            "HS": lambda x: x.hs,
-            "ADR": lambda x: x.adr,
-            "UD": lambda x: x.ud,
-            "KAST": lambda x: x.kast,
-            "RAT": lambda x: x.rat2_0
-        }
-        stats = reversed(sorted(stats, key=sort_dict[sort]))
-        return stats
 
     def print_statistics(self):
         filling = len(self.team_a[3]) - 4
